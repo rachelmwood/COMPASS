@@ -1,0 +1,43 @@
+---
+title: "Statistical Computing Portfolio 1"
+author: "Rachel"
+date: "2022-09-27"
+output: html_document
+---
+
+For this portfolio I will be using data obtained from the World Bank's DataBank on Gender Statistics [^1]. Since there are approximately 1000 possible metrics and 265 countries to consider, I will only be focusing on
+
+[^1]: <https://databank.worldbank.org/reports.aspx?source=gender-statistics#>
+
+#Reproducibility and Literate Programming
+
+One of the most methodologically challenging aspect of data analysis is the difficulty in developing code that can easily be recreated by other researchers, or even the original researcher. This has typically been driven by two main factors:
+
+-   The code produced may not run correctly on computer systems other than the one it was developed on
+-   The research often includes many steps (finding data, reformatting, performing computiations and producing results and figures), where the approach of one step depends on the results of the previous one. The details of these components are also not recorded well enough to reproduce the data analysis.
+
+While these were valid reasons historically, they no longer apply to current computer systems. Another potential issue is the data might not be public, but it would still be beneficial to share the program applied to synthetic data.
+
+One way to remedy this is by using literate programming.
+
+For the dataset I will be using, the data needs to be tidied before being analysed. The information will be read from the raw data file and saved to a new file after some processing. I will use R markdown to demonstrate the steps I take. First the data needs to be loaded as follows:
+```{r}
+data <- read_csv("Raw_Gender_Data.csv")
+data 
+```
+Note as we loaded the data, we set the ID column to be the series name, as this is a unique identifier for each row. It also makes further data manipualtion easier. 
+By looking at our data we can see there are many series where there is no data for any country. One way we can then tidy this data is by removing such columns. We will also remove the first two columns, as all our data is from the year 2020 so these columns do not give any new information.
+```{r}
+data <- data[,-c(1,2)]
+data <- data %>% na_if("..")
+data <- data[rowSums(is.na(data)) < ncol(data)-10, ]
+data <- data[,colSums(is.na(data)) < nrow(data)]
+```
+
+#Packages, Version Control and Testing
+
+#Common R Functions
+
+#Functional and Object-Oriented Programming
+
+#The TidyVerse
