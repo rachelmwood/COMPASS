@@ -1,0 +1,60 @@
+---
+title: "Statistical Computing Portfolio 1"
+author: "Rachel"
+date: "2022-09-27"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+For this portfolio I will be using data obtained from the World Bank's DataBank on Gender Statistics [^1]. Since there are approximately 1000 possible metrics and 265 countries to consider, I will only be focusing on the employment data
+
+[^1]: <https://databank.worldbank.org/reports.aspx?source=gender-statistics#>
+
+```{r, echo=FALSE}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(corrplot)
+library(sjmisc)
+```
+
+#Reproducibility and Literate Programming
+
+One of the most methodologically challenging aspect of data analysis is the difficulty in developing code that can easily be recreated by other researchers, or even the original researcher. This has typically been driven by two main factors:
+
+-   The code produced may not run correctly on computer systems other than the one it was developed on
+-   The research often includes many steps (finding data, reformatting, performing computiations and producing results and figures), where the approach of one step depends on the results of the previous one. The details of these components are also not recorded well enough to reproduce the data analysis.
+
+While these were valid reasons historically, they no longer apply to current computer systems. Another potential issue is the data might not be public, but it would still be beneficial to share the program applied to synthetic data.
+
+One way to remedy this is by using literate programming.
+
+For the dataset I will be using, the data needs to be tidied before being analysed. The information will be read from the raw data file and saved to a new file after some processing. I will use R markdown to demonstrate the steps I take. First the data needs to be loaded as follows:
+```{r}
+data <- read_csv("Raw_Gender_Data.csv", show_col_types = FALSE)
+data 
+```
+One way we can tidy the data is to remove the first 3 columns, as the first two are constant for every entry. The third column is not necessary as the series code shows the same information and the shorter strings are easier to display and handle.
+We can see on first glance that there is a lot of missing values from our data, so we want to tidy it so we are left with data containing no missing values. Before deciding which rows and columns to remove we need to see how the missing values are distributed. Missing values in this data are listed as the string "..", so we first need to change these to class NA, to ensure they are properly handled by the built-in R functions. We can then get a vector of the number of missing values in each row:
+```{r}
+data <- data[,-c(1,2,3)]
+data <- data %>% na_if("..")
+rowSums(is.na(data))
+```
+We can see there are many variables with 28 missing values, choosing these series to include in our analysis means we will have enough variables to hopefully find interesting patterns without dealing with too much missing data. Looking at the pattern of our data, it is plausible that the missing values for each series occurs for the same 28 countries. We can then remove the countries for which there are no entries. Finally we rotate the data frame to have each row corresponding to a country as this is more intuitive, and change the class of each column as numeric rather than character. 
+```{r}
+data <- data[rowSums(is.na(data)) == 28, ]
+data <- data[,colSums(is.na(data)) < nrow(data)]
+data <- rotate_df(data, cn = TRUE)
+data <- sapply(data, as.numeric)
+```
+
+Now we have a workable dataset, one thing that might be interesting to visualise is the correlation matrix for the series. Since all of these series are related to employment statistics, it is reasonable to expect that there are some correlation patterns.
+
+```{r}
+cortable <- cor(data)
+corrplot(cortable,tl.cex = 0.5, tl.col = "black")
+```
+
+
