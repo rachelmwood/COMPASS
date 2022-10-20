@@ -11,7 +11,7 @@ For this portfolio I will be using data obtained from the World Bank's DataBank 
 
 [^1]: <https://databank.worldbank.org/reports.aspx?source=gender-statistics#>
 
-```{r, echo=FALSE}
+```{r, include=FALSE}
 library(tidyr)
 library(dplyr)
 library(readr)
@@ -19,7 +19,6 @@ library(corrplot)
 library(sjmisc)
 ```
 
-#Reproducibility and Literate Programming
 
 One of the most methodologically challenging aspect of data analysis is the difficulty in developing code that can easily be recreated by other researchers, or even the original researcher. This has typically been driven by two main factors:
 
@@ -29,6 +28,7 @@ One of the most methodologically challenging aspect of data analysis is the diff
 While these were valid reasons historically, they no longer apply to current computer systems. Another potential issue is the data might not be public, but it would still be beneficial to share the program applied to synthetic data.
 
 One way to remedy this is by using literate programming.
+
 
 For the dataset I will be using, the data needs to be tidied before being analysed. The information will be read from the raw data file and saved to a new file after some processing. I will use R markdown to demonstrate the steps I take. First the data needs to be loaded as follows:
 ```{r}

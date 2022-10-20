@@ -1,0 +1,46 @@
+---
+title: "Reproducibility and Literate Programming"
+author: "Rachel"
+date: "2022-10-19"
+output:
+  pdf_document: default
+---
+
+For this portfolio I will be using data obtained from the World Bank's DataBank on Gender Statistics [\^1] to demonstrate how one might use literate programming to produce code that can easily be recreated by anyone reading this report. 
+We first load the packages that we'll be making use of in our analysis
+[\^1]: <https://databank.worldbank.org/reports.aspx?source=gender-statistics#> 
+```{r, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(purrr)
+library(corrplot)
+library(sjmisc)
+library(kableExtra)
+```
+
+Since there are approximately 1000 possible metrics and 265 countries to consider for a period of >20 years, I will only be focusing on the employment data for 2020, which I have downloaded into a CSV file directly from the website. To load this into our environment we can run the following (as long as the data is in the same directory as the markdown file)
+```{r}
+data <- read_csv("Raw_Gender_Data.csv", show_col_types = FALSE)
+```
+
+If we look at a summary of the first two columns we can see they are just denoting the year, which is constant and thus not useful, thus we remove it. The fourth column contains a unique series code and the third column contains a longer description of the metric. Since this is the same information, we can remove the less concise third column. If we want to retrieve it, the data comes with a CSV file containing the series name for each series column. 
+```{r}
+data <- data[,-c(1,2,3)]
+```
+
+Then we might want to take a brief visual inspection of our data (for simplicity we just look at the first 15 rows and 5 countries):
+```{r}
+knitr::kable(data[1:15,1:6],booktabs = TRUE) %>% 
+  kable_styling(font_size = 8, latex_options = "scale_down")
+```
+
+We can see that there are many missing values, although here they are represented by an ellipses. We can then change these to NA, as this is what R recognises as missing values, and then see how many missing values there are in each row
+```{r}
+data <- data %>% na_if("..") 
+na_freq <- tibble("Number of Missing Values" = 1:max(rowSums(is.na(data))), "Frequency" = tabulate(rowSums(is.na(data))))
+na_freq <- na_freq[!(na_freq$Frequency == 0),]
+knitr::kable(t(na_freq))%>% 
+  kable_styling(font_size = 8, latex_options = "scale_down")
+
+```
