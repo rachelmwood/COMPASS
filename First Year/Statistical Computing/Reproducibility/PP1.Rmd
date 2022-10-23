@@ -32,8 +32,7 @@ One way to remedy this is by using literate programming.
 
 For the dataset I will be using, the data needs to be tidied before being analysed. The information will be read from the raw data file and saved to a new file after some processing. I will use R markdown to demonstrate the steps I take. First the data needs to be loaded as follows:
 ```{r}
-data <- read_csv("Raw_Gender_Data.csv", show_col_types = FALSE)
-data 
+data <- read_csv("Raw_Gender_Data.csv",show_col_types = FALSE)
 ```
 One way we can tidy the data is to remove the first 3 columns, as the first two are constant for every entry. The third column is not necessary as the series code shows the same information and the shorter strings are easier to display and handle.
 We can see on first glance that there is a lot of missing values from our data, so we want to tidy it so we are left with data containing no missing values. Before deciding which rows and columns to remove we need to see how the missing values are distributed. Missing values in this data are listed as the string "..", so we first need to change these to class NA, to ensure they are properly handled by the built-in R functions. We can then get a vector of the number of missing values in each row:

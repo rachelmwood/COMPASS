@@ -6,10 +6,10 @@ output:
   pdf_document: default
 ---
 
-For this portfolio I will be using data obtained from the World Bank's DataBank on Gender Statistics [\^1] to demonstrate how one might use literate programming to produce code that can easily be recreated by anyone reading this report. 
+For this portfolio I will be using data obtained from the World Bank's DataBank on Gender Statistics ^[<https://databank.worldbank.org/reports.aspx?source=gender-statistics#>] to demonstrate how one might use literate programming to produce code that can easily be recreated by anyone reading this report. This portfolio focuses on processing the data so it can then be ready for analysis.
+
 We first load the packages that we'll be making use of in our analysis
-[\^1]: <https://databank.worldbank.org/reports.aspx?source=gender-statistics#> 
-```{r, include=FALSE}
+```{r, message=FALSE}
 library(tidyr)
 library(dplyr)
 library(readr)
@@ -32,15 +32,29 @@ data <- data[,-c(1,2,3)]
 Then we might want to take a brief visual inspection of our data (for simplicity we just look at the first 15 rows and 5 countries):
 ```{r}
 knitr::kable(data[1:15,1:6],booktabs = TRUE) %>% 
-  kable_styling(font_size = 8, latex_options = "scale_down")
+  kable_styling(font_size = 8, latex_options = "HOLD_position")
 ```
 
 We can see that there are many missing values, although here they are represented by an ellipses. We can then change these to NA, as this is what R recognises as missing values, and then see how many missing values there are in each row
 ```{r}
 data <- data %>% na_if("..") 
-na_freq <- tibble("Number of Missing Values" = 1:max(rowSums(is.na(data))), "Frequency" = tabulate(rowSums(is.na(data))))
-na_freq <- na_freq[!(na_freq$Frequency == 0),]
-knitr::kable(t(na_freq))%>% 
-  kable_styling(font_size = 8, latex_options = "scale_down")
-
+na_freq <- tabulate(rowSums(is.na(data)))
+na_mat <- rbind( "Missing Values" = 1:length(na_freq), "Frequency" =na_freq)
+na_mat <- na_mat[,!(na_mat[2,]==0)]
+na_mat
 ```
+We can see there are many variables with 28 missing values, choosing these series to include in our analysis means we will have enough variables to hopefully find interesting patterns without dealing with too much missing data. Looking at the pattern of our data, it is plausible that the missing values for each series occurs for the same 28 countries. We can then remove the countries for which there are no entries. Finally we rotate the data frame to have each row corresponding to a country as this is more intuitive 
+```{r}
+data <- data[rowSums(is.na(data)) == 28, ]
+data <- data[,colSums(is.na(data)) < nrow(data)]
+data <-  rotate_df(data, cn = TRUE)
+```
+
+Now that we have a more workable dataset, we can save this data to a new file, so we can keep the raw data and processed data separately:
+```{r}
+write_csv(data, "Processed_Gender_Data")
+```
+
+
+
+
