@@ -6,7 +6,7 @@ output: pdf_document
 ---
 This portfolio will detail the different ways we can make code faster and more efficient by eliminating loops as much as possible. We will first define a few functions containing loops, for which we will write more efficient versions. We can then compare the speed of these using the `system.time()` function.
 
-The first function we will test is to sum the elements of a numeric matrix (we do this for emphasis, as the results for this are more dramatic than for a vector):
+We start with some basic functions with vectorised base R analogues (we do this for emphasis, as the results for this are more dramatic than for a vector):
 ```{r}
 sum_loop <- function(x){
   count <- 0
@@ -31,11 +31,12 @@ sin_loop <- function(x){
 }
 ```
 
+We can then consider some more complicated functions. 
 
 # Vectorisation
 Many base R functions are vectorised, meaning they will take a vector as input and will perform the computation on the vector elementwise, which will run much faster than if we were to use a loop. To see this, we can compare the run times for our `sum_loop()` function and the built-in `sum()` function on an arbitrary matrix `X`:
 ```{r}
-x <- matrix(1:10000, nrow =100)
+x <- matrix(1:1000000, nrow =1000)
 system.time(sum_loop(x))
 system.time(sum(x))
 ```
@@ -47,7 +48,12 @@ system.time(sum(sin(x)))
 
 
 # Apply Family of Functions
-
-
+This class of built-in R functions allows to apply the same function across lists, arrays or dataframes.
 
 # Parallel Programming
+
+
+
+
+
+create final plot of length of vector vs time??
