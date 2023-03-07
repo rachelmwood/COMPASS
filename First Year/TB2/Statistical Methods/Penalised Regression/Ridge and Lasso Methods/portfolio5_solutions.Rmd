@@ -1,0 +1,60 @@
+---
+title: "Ridge, LASSO and Smoothing"
+output: pdf_document
+date: "2023-03-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(1234)
+```
+
+# Task 1
+For this task we use the `mogavs` dataset on communities and crime:
+
+```{r}
+library(mogavs)
+data("crimeData")
+head(crimeData, 5)
+```
+
+We normalise and divide our data into training and testing sets:
+```{r}
+crimeData <- scale(crimeData)
+
+train <- sample(1:nrow(crimeData), 1500)
+X_train <- crimeData[train, -123]
+y_train <- crimeData[train, 123]
+
+X_test <- crimeData[-train, -123]
+y_test <- crimeData[-train, 123]
+```
+
+## Plotting the Paths
+We use the `glmnet` package to perform LASSO, setting the `alpha` parameter to be 1 and ridge regression, by using `alpha = 0`. This gives us the following path visualisations
+```{r}
+library(glmnet)
+
+lasso_fit <- glmnet(X_train, y_train, family = "gaussian", alpha = 1)
+plot(lasso_fit, xvar = "lambda")
+
+ridge_fit <- glmnet(X_train, y_train, family = "gaussian", alpha = 0)
+plot(ridge_fit, xvar = "lambda")
+```
+
+
+We use the `cv.glmnet` function to perform cross validation on $\lambda$. We set the measure to be `"mse"` and stay with the default number of folds which is 10:
+```{r}
+lasso_cv <- cv.glmnet(X_train, y_train, type.measure = "default", alpha =1)
+ridge_cv <- cv.glmnet(X_train, y_train, type.measure = "default", alpha =0)
+plot(lasso_cv)
+plot(ridge_cv)
+
+coef(lasso_cv)
+coef(ridge_cv)
+```
+We now use the out-of-sample error obtained from the `predict()` function to compare the ridge regression and LASSO regression we obtained. 
+
+```{r}
+
+```
