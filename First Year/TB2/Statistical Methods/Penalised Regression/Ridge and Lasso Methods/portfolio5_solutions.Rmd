@@ -5,7 +5,7 @@ date: "2023-03-02"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 set.seed(1234)
 ```
 
@@ -15,7 +15,6 @@ For this task we use the `mogavs` dataset on communities and crime:
 ```{r}
 library(mogavs)
 data("crimeData")
-head(crimeData, 5)
 ```
 
 We normalise and divide our data into training and testing sets:
@@ -53,8 +52,12 @@ plot(ridge_cv)
 coef(lasso_cv)
 coef(ridge_cv)
 ```
+
 We now use the out-of-sample error obtained from the `predict()` function to compare the ridge regression and LASSO regression we obtained. 
 
 ```{r}
+lasso_residuals <- y_test - predict(lasso_cv, X_test)
+ridge_residuals <- y_test - predict(ridge_cv, X_test)
 
+c(sum(lasso_residuals^2), sum(ridge_residuals^2))
 ```
