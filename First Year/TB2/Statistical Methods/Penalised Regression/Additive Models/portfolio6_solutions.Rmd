@@ -1,0 +1,34 @@
+---
+title: "Portfolio 6"
+author: "Rachel Wood"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this portfolio we will use data from the `gss` package, modelling `ret` as a function of `dur`, `gly` and `bmi`. 
+
+```{r}
+library(gss)
+data("wesdr")
+head(wesdr)
+dim(wesdr)
+```
+We first split the data into training and testing sets:
+
+```{r}
+train <- sample(1:nrow(wesdr), 500)
+
+data_train <- wesdr[train,]
+data_test <- wesdr[-train,]
+```
+
+We now fit a GAM model with the `gam()` function, which uses generalised cross-validation to fit our model parameters:
+```{r}
+fit <- gam(ret ~ s(dur) + s(gly) + s(bmi), data = data_train )
+summary(fit)
+plot(data_train$bmi, fit$fitted.values)
+```
