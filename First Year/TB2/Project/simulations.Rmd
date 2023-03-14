@@ -1,18 +1,74 @@
 ---
 title: "R Notebook"
-output: pdf_notebook
+output:
+  pdf_document: default
+  pdf_notebook: default
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+## Without Mixtures
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+We first load the ClaritySim and Clarity package and simulate some appropriate data:
 
 ```{r}
-plot(cars)
+library(ClaritySim)
+library(Clarity)
+set.seed(1)
+n=100 
+k=10
+original <- simulateCoalescent(n,k,
+                         sigma0=0.0001,
+                         Amodel="uniform",
+                         alpha=0,
+                         minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
+
+similar <- transformCoalescent(original)
+
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+We can now visualize the trees from these 3 different simulated data:
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+par(mfrow = c(1,2))
+plot(original$tree)
+plot(similar$tree)
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+We now obtain the similarity matrices for the subjects in both models
+
+```{r}
+original_dist <- original$Y
+
+similar_dist <- similar$Y
+```
+
+### Predicting the Transformed Data from the Original
+
+```{r}
+original_scan <- Clarity_Scan(original_dist)
+
+similar_predict <- Clarity_Predict(similar_dist, original_scan)
+
+similar_compare <- Clarity_Compare(original_scan, D = original$D, Dnew = similar$D, nbs = 200, H0="structure")
+```
+
+We can now plot aspects of the predictions:
+
+```{r}
+tdist <- dist(original_dist)
+
+clusters <- hclust(tdist)
+
+tend <- as.dendrogram(clusters)
+
+order <- labels(reorder(tend, colMeans(as.matrix(tdist))))
+
+
+```
+
+## With Mixtures
+
+```{r}
+mixture <- mixCoalescent(original)
+
+mixture_dist <- mixture$Y
+```
