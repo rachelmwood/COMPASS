@@ -1,0 +1,157 @@
+---
+title: "SM2 Assessed Coursework"
+author: "Rachel Wood"
+date: "2023-03-14"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{=tex}
+\renewcommand{\H}{\mathcal{H}}
+\newcommand{\argmax}[1]{\underset{#1}{\operatorname{argmax}}}
+```
+This portfolio considers a model for $n$ observations $\{ (y_i^0, x_i^0)\} \in \mathbb{R} \times \mathbb{R}^{p}$ defined by
+
+\begin{equation} \label{model}
+Y_i^0 \sim f(y;\mu_i, \phi)dy, \hspace{0.5cm} g(\mu_i) = \alpha + f(x_i^0), \hspace{0.5cm} \text{for} i = 1, \ldots, n
+\end{equation} where $\alpha \in \mathbb{R}, \ \phi \in (0, \infty)$ and $f \in \mathcal{F} = \mathcal{H}_k$.
+
+Here $(\mathcal{H_k}, \left< \cdot, \cdot \right>)$ is a reproducible kernel Hilbert space (RKHS) with positive semi definite kernel $k$. Then we have that $\mathcal{H}_k$ satisfies the reproducibility property
+
+```{=tex}
+\begin{equation}
+f(x) = \left< f, k(x, \cdot ) \right> \hspace{0.5cm} \forall x \in \mathcal{X}, \forall f \in \mathcal{H}_k
+\end{equation}
+```
+# Part 1
+
+## Question 1
+
+Here we consider the identifiability of (\ref{model}). A kernel will lead to identifiable models if and only if the corresponding RKHS does not contain constant functions.
+
+\paragraph{Unidentifiable kernel:}
+
+We can take the kernel to be $$
+k(x,y) = 1
+$$ which is positive semi-definite, we can see that taking $\H_k = \{ f: f(x) = c \ \forall x \}$ and $\left< f , g\right>_k = fg$ satisfies the reproducing property: $$
+f(x) = \left< f,\  k(x, \cdot) \right> = \left< f, 1 \right> = f \hspace{0.5cm} \forall x \in \mathcal{X}, \ \forall f \in \mathcal{H}_k
+$$ and thus $(\mathcal{H}_k, \left< \cdot, \cdot \right>_k)$ is the corresponding RKHS. Since $\mathcal{H}_k$ is made up of constant functions, $k$ does not produce identifiable models.
+
+\paragraph{Identifiable Kernel:}
+
+An example of an identifiable kernel is the Gaussian kernel: $$
+k_\lambda ( x, x')= \exp \left( - \frac{||x - x' ||^2}{\lambda} \right) 
+$$ Any function in the corresponding RKHS $f \in \mathcal{H}_k$ must satisfy: $$
+f(x) = \left< f, k(x, \cdot)\right> = \frac{1}{\lambda} \left< f, - \exp||x - \cdot  ||^2 \right>
+$$ It is clear that there is no constant function $f$ (excepting the zero function) which satisfies this. Hence the Gaussian kernel leads to identifiable models.
+
+## Question 2
+
+For this question, we consider the solution $\hat f_\lambda$ to the optimisation problem
+
+```{=tex}
+\begin{equation} \label{opt}
+  ( \hat{\alpha_\lambda}, \hat{\phi_\lambda}, \hat{f_\lambda} ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), f \in \H_k} \frac{1}{2n} \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha + f(x_i^0) \right), \phi \right) - \lambda ||f||_{\H_k}^2
+\end{equation}
+```
+We assume $\mathcal{H}_k = \tilde{\mathcal{H}_{n}} \oplus \tilde{\mathcal{H}_{n}}^{\perp}$, hence we can write $\hat f_\lambda = f_1 + f_2$ where $f_1 \in \tilde{\mathcal{H}_n}$ and $f_2 \in \tilde{\mathcal{H}_n}^{\perp}$. Thus there exists coefficients $\hat \beta_\lambda = \left( \hat \beta_{\lambda,1}, \ldots, \hat \beta_{\lambda,n} \right) \in \mathbb{R}^n$ such that
+
+$$
+f_1 = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot)
+$$
+
+and we can write $f = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot) + f_2$. Further, by the reproducing property, for any $x_j$:
+
+$$
+f(x_j) = \left< \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot) + f_2, \ k(x_j^0,\cdot) \right>  = \sum_{i = 1}^n \hat \beta_{\lambda,i} \left< k(x_i^0, \cdot), k(x_j^0, \cdot) \right> = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, x_j^0)
+$$
+
+and so $f(x_j)$ does not depend on $f_2$ and as a consequence, the first term in (\ref{opt}) also does not depend on $f_2$. Hence to choose $f_2$ we only need to consider minimizing the regularisation term. Using that $\left<f_1, f_2 \right> = 0$, we see
+
+$$
+||f||_{\mathcal{H}_k}^2 = \left< f_1 +f_2, f_1 +f_2 \right> = ||f_1||_{\mathcal{H}_k}^2 + ||f_2||_{\mathcal{H}_k}^2 \geq ||f_1||_{\mathcal{H}_k}^2 
+$$
+
+with the last inequality becoming an equality when $f_2 = 0$. Hence the minimiser $\hat f_\lambda$ must have $f_2 = 0$ and can be written as
+
+```{=tex}
+\begin{equation} \label{f_sol}
+  \hat f_\lambda = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot)
+\end{equation}
+```
+## Question 3
+
+We now want to substitute the results of (\ref{f_sol}) into (\ref{opt}). The regularisation term becomes:
+
+```{=tex}
+\begin{align*}
+||f||_{\H_k}^2 &=  \left< \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot), \sum_{i = j}^n \hat \beta_{\lambda,j} k(x_j^0, \cdot) \right> \\
+&= \sum_{i = 1}^{n} \sum_{j = 1}^n \hat \beta_{\lambda,i} \left< k(x_i^0, \cdot), k(x_j^0, \cdot) \right> \hat \beta_{\lambda,j} \\
+&= \sum_{i = 1}^{n} \sum_{j = 1}^n \hat \beta_{\lambda,i} k(x_i^0, x_j^0) \hat \beta_{\lambda,j} \\
+&= \hat \beta_\lambda^T K \hat \beta_\lambda
+\end{align*}
+```
+and so (\ref{opt}) becomes
+
+```{=tex}
+\begin{equation} \label{new_opt}
+(\hat{\alpha_\lambda}, \hat{\phi_\lambda}, \hat{\beta_\lambda} ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), \beta \in \mathbb{R}^n} \frac{1}{2n} \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha + \sum_{j = 1}^n \beta_{i} k(x_i^0, x_j^0) \right), \phi \right) - \lambda \beta^T K \beta
+\end{equation}
+```
+## Question 4
+
+Given $m \leq n+2$, we want to obtain an $m$-dimensional problem. Then $d = m -2$ is the length of the new $\tilde \beta_\lambda$ vector to estimate.
+
+The Nyström method approximates $k$ by $\tilde{f}^{(m)} = k^{(m)}$, given by 
+
+$$
+\tilde k^{(d)} ( x, x') = k_d (x)^T  K_{d,d}^{-1} \ k_d(x')
+$$ 
+
+where $K_{d, d} \in \mathbb{R}^{d\times d}$ is the first $d$ rows and columns of the gram matrix $K$ and $k_d (x) = (k(x_1^0,x), \ldots, k(x_d^0, x))$
+
+Then we can write $f(x)$ as $$
+f =\sum_{i = 1}^n \beta_{i}\ \tilde k_d(x_i^0, \cdot) = \sum_{i = 1}^n \beta_{i}\ k_d (x_i^0)^T K_{d,d}^{-1} \ k_d(\cdot) = \left( \sum_{i = 1}^n \beta_{i}\ k_d (x_i^0)^T  K_{d,d}^{-1} \right) k_d(\cdot)
+$$
+
+and take the new vector of coefficients to be: $$
+\tilde \beta^T = \sum_{i = 1}^n \beta_{i}\ k_d (x_i^0)^T \left( K_d^0 \right)^{-1} = \beta^T K_{n,d} K_{d,d}^{-1}
+$$ 
+
+where $K_{n,d} \in \mathbb{R}^{n \times d}$ is the first $d$ columns of $K$ We can now rewrite $f$ as: 
+
+$$
+f = \tilde \beta^T k_d(\cdot) = \sum_{j =1}^d \tilde \beta_j  k(x_j, \cdot)
+$$
+
+We now consider the regularisation term, again we substitute $\tilde k^{(d)}$:
+
+$$
+\beta^T \tilde K^{(d)} \beta = \beta^T K_{n,d}\  K_{d,d}^{-1} \ K_{n,d}^T \ \beta = \left(\beta^T K_{n,d} \ K_{d,d}^{-1}   \right) K_{d,d}^T \left( K_{d,d}^{-T}\ K_{n,d}\ \beta \right) = \tilde \beta^T K_{d,d}^T \ \tilde \beta
+$$ 
+
+Hence we can now write our $m$-dimension optimisation problem:
+
+```{=tex}
+\begin{equation} \label{m_opt}
+(\hat{\alpha_\lambda}, \hat{\phi_\lambda}, {\tilde \beta_\lambda} ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), \tilde \beta \in \mathbb{R}^d} \frac{1}{2n} \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha + \sum_{j =1}^d \tilde \beta_j  k(x_j, x_i) \right), \phi \right) - \lambda \tilde \beta^T K_{d,d}^T \ \tilde \beta
+\end{equation}
+```
+
+## Question 5
+
+For this question we first need to obtain the penalty term as $\omega ^T \omega$ for some vector $\omega$. We can first obtain the eigen-decomposition of $K_{d,d}^T$:
+$$
+K_{d,d}^T = V \Lambda V^T
+$$
+Then writing $\Lambda = \Lambda^{\frac{1}{2}} \Lambda^{\frac{1}{2}} = \Lambda^{\frac{1}{2}} \left(\Lambda^{\frac{1}{2}}\right)^T$, we get
+$$
+\tilde \beta^T K_{d,d} \ \tilde \beta = \tilde \beta^T V \Lambda^{\frac{1}{2}} \left(\Lambda^{\frac{1}{2}}\right)^T V^T \tilde \beta = \omega^T \omega
+$$
+where $\omega^T = \tilde \beta^T V \Lambda^{\frac{1}{2}}$
+
+
+
