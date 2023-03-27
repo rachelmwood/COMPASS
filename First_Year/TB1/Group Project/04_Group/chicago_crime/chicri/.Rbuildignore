@@ -1,0 +1,9 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^README\.Rmd$
+^temp_data$
+^\.github$
+^data$
+^R/backup_utils\.R$
+^backup\.RData$

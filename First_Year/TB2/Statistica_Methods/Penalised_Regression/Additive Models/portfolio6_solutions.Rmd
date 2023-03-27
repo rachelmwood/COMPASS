@@ -1,0 +1,58 @@
+---
+title: "Portfolio 6"
+author: "Rachel Wood"
+date: "2023-03-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+For this portfolio we will use data from the `gss` package, modelling `ret` as a function of `dur`, `gly` and `bmi`. 
+
+```{r}
+library(gss)
+data("wesdr")
+head(wesdr)
+dim(wesdr)
+```
+We first split the data into training and testing sets:
+
+```{r}
+library(dplyr)
+train <- sample(1:nrow(wesdr), 500)
+
+data_train <- wesdr[train,] %>%
+  as_tibble()
+data_test <- wesdr[-train,] %>% 
+  as_tibble()
+```
+
+We now fit a GAM model with the `gam()` function, which uses generalised cross-validation to fit our model parameters:
+```{r}
+library(mgcv)
+fit <- gam(ret ~ s(dur, bs = "cr") + s(gly, bs = "cr") + s(bmi, bs = "cr"), data = data_train, family = "binomial")
+```
+
+We now want to visualise the estimated functions to see if they are in fact non-linear:
+```{r}
+library(gratia)
+
+draw(fit, smooth_col = "steelblue3", ci_col = "steelblue3", rug  = FALSE)
+```
+We can see that the `gly` variable appears to be linear, but `dur` and `bmi` do not seem to be. From this we can see a GAM would be appropriate. We can confirm this by comparing the out-of-sample error of this model to one which assumes all functions are linear:
+
+```{r}
+gam_error <- sum((predict(fit, data_test, type = "response") - data_test$ret)^2)
+
+glm_fit <- glm(ret ~ dur + gly + bmi, data = data_train, family = "binomial")
+glm_error <- sum((predict(glm_fit, data_test, type = "response") - data_test$ret)^2)
+
+print(paste("GAM out-of-sample error:", gam_error))
+print(paste("GLM out-of-sample error:", glm_error))
+```
+
+From this we see the GAM has slightly superior predictive power, although this is marginal. 

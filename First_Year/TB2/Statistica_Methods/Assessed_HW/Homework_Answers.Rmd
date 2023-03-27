@@ -1,0 +1,436 @@
+---
+title: "SM2 Assessed Coursework"
+author: "Rachel Wood"
+date: "2023-03-14"
+output: 
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+set.seed(1)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+```{=tex}
+\renewcommand{\H}{\mathcal{H}}
+\newcommand{\argmax}[1]{\underset{#1}{\operatorname{argmax}}}
+```
+This portfolio considers a model for $n$ observations $\{ (y_i^0, x_i^0)\} \in \mathbb{R} \times \mathbb{R}^{p}$ defined by
+
+\begin{equation} \label{model}
+Y_i^0 \sim f(y;\mu_i, \phi)dy, \hspace{0.5cm} g(\mu_i) = \alpha + f(x_i^0), \hspace{0.5cm} \text{for} i = 1, \ldots, n
+\end{equation} where $\alpha \in \mathbb{R}, \ \phi \in (0, \infty)$ and $f \in \mathcal{F} = \mathcal{H}_k$.
+
+Here $(\mathcal{H_k}, \left< \cdot, \cdot \right>)$ is a reproducible kernel Hilbert space (RKHS) with positive semi definite kernel $k$. Then we have that $\mathcal{H}_k$ satisfies the reproducibility property
+
+```{=tex}
+\begin{equation}
+f(x) = \left< f, k(x, \cdot ) \right> \hspace{0.5cm} \forall x \in \mathcal{X}, \forall f \in \mathcal{H}_k
+\end{equation}
+```
+# Part 1
+
+## Question 1
+
+Here we consider the identifiability of (\ref{model}). A kernel will lead to identifiable models if and only if the corresponding RKHS does not contain constant functions.
+
+\paragraph{Unidentifiable kernel:}
+
+We can take the kernel to be $$
+k(x,y) = 1
+$$ which is positive semi-definite, we can see that taking $\H_k = \{ f: f(x) = c \ \forall x \}$ and $\left< f , g\right>_k = fg$ satisfies the reproducing property: $$
+f(x) = \left< f,\  k(x, \cdot) \right> = \left< f, 1 \right> = f \hspace{0.5cm} \forall x \in \mathcal{X}, \ \forall f \in \mathcal{H}_k
+$$ and thus $(\mathcal{H}_k, \left< \cdot, \cdot \right>_k)$ is the corresponding RKHS. Since $\mathcal{H}_k$ is made up of constant functions, $k$ does not produce identifiable models.
+
+\paragraph{Identifiable Kernel:}
+
+An example of an identifiable kernel is the Gaussian kernel: $$
+k_\lambda ( x, x')= \exp \left( - \frac{||x - x' ||^2}{\lambda} \right) 
+$$ Any function in the corresponding RKHS $f \in \mathcal{H}_k$ must satisfy: $$
+f(x) = \left< f, k(x, \cdot)\right> = \frac{1}{\lambda} \left< f, - \exp||x - \cdot  ||^2 \right>
+$$ It is clear that there is no constant function $f$ (excepting the zero function) which satisfies this. Hence the Gaussian kernel leads to identifiable models.
+
+## Question 2
+
+For this question, we consider the solution $\hat f_\lambda$ to the optimisation problem
+
+```{=tex}
+\begin{equation} \label{opt}
+  ( \hat{\alpha_\lambda}, \hat{\phi_\lambda}, \hat{f_\lambda} ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), f \in \H_k} \frac{1}{2n} \ \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha + f(x_i^0) \right), \phi \right) - \lambda ||f||_{\H_k}^2
+\end{equation}
+```
+We assume $\mathcal{H}_k = \tilde{\mathcal{H}_{n}} \oplus \tilde{\mathcal{H}_{n}}^{\perp}$, hence we can write $\hat f_\lambda = f_1 + f_2$ where $f_1 \in \tilde{\mathcal{H}_n}$ and $f_2 \in \tilde{\mathcal{H}_n}^{\perp}$. Thus there exists coefficients $\hat \beta_\lambda = \left( \hat \beta_{\lambda,1}, \ldots, \hat \beta_{\lambda,n} \right) \in \mathbb{R}^n$ such that
+
+$$
+f_1 = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot)
+$$
+
+and we can write $f = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot) + f_2$. Further, by the reproducing property, for any $x_j$:
+
+$$
+f(x_j) = \left< \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot) + f_2, \ k(x_j^0,\cdot) \right>  = \sum_{i = 1}^n \hat \beta_{\lambda,i} \left< k(x_i^0, \cdot), k(x_j^0, \cdot) \right> = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, x_j^0)
+$$
+
+and so $f(x_j)$ does not depend on $f_2$ and as a consequence, the first term in (\ref{opt}) also does not depend on $f_2$. Hence to choose $f_2$ we only need to consider minimizing the regularisation term. Using that $\left<f_1, f_2 \right> = 0$, we see
+
+$$
+||f||_{\mathcal{H}_k}^2 = \left< f_1 +f_2, f_1 +f_2 \right> = ||f_1||_{\mathcal{H}_k}^2 + ||f_2||_{\mathcal{H}_k}^2 \geq ||f_1||_{\mathcal{H}_k}^2 
+$$
+
+with the last inequality becoming an equality when $f_2 = 0$. Hence the minimiser $\hat f_\lambda$ must have $f_2 = 0$ and can be written as
+
+```{=tex}
+\begin{equation} \label{f_sol}
+  \hat f_\lambda = \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot)
+\end{equation}
+```
+## Question 3
+
+We now want to substitute the results of (\ref{f_sol}) into (\ref{opt}). The regularisation term becomes:
+
+```{=tex}
+\begin{align*}
+||f||_{\H_k}^2 &=  \left< \sum_{i = 1}^n \hat \beta_{\lambda,i} k(x_i^0, \cdot), \sum_{i = j}^n \hat \beta_{\lambda,j} k(x_j^0, \cdot) \right> \\
+&= \sum_{i = 1}^{n} \sum_{j = 1}^n \hat \beta_{\lambda,i} \left< k(x_i^0, \cdot), k(x_j^0, \cdot) \right> \hat \beta_{\lambda,j} \\
+&= \sum_{i = 1}^{n} \sum_{j = 1}^n \hat \beta_{\lambda,i} k(x_i^0, x_j^0) \hat \beta_{\lambda,j} \\
+&= \hat \beta_\lambda^T K \hat \beta_\lambda
+\end{align*}
+```
+and so (\ref{opt}) becomes
+
+```{=tex}
+\begin{equation} \label{new_opt}
+(\hat{\alpha_\lambda}, \hat{\phi_\lambda}, \hat{\beta_\lambda} ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), \beta \in \mathbb{R}^n} \ \frac{1}{2n} \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha + \sum_{j = 1}^n \beta_{i} k(x_i^0, x_j^0) \right), \phi \right) - \lambda \beta^T K \beta
+\end{equation}
+```
+## Question 4
+
+Given $m \leq n+2$, we want to obtain an $m$-dimensional problem. Then $d = m -2$ is the length of the new $\tilde \beta_\lambda$ vector to estimate.
+
+The Nyström method approximates $k$ by $\tilde{f}^{(m)} = k^{(m)}$, given by 
+
+$$
+\tilde k^{(d)} ( x, x') = k_d (x)^T  K_{d,d}^{-1} \ k_d(x')
+$$ 
+
+where $K_{d, d} \in \mathbb{R}^{d\times d}$ is the first $d$ rows and columns of the gram matrix $K$ and $k_d (x) = (k(x_1^0,x), \ldots, k(x_d^0, x))$
+
+Then we can write $f(x)$ as $$
+f =\sum_{i = 1}^n \beta_{i}\ \tilde k_d(x_i^0, \cdot) = \sum_{i = 1}^n \beta_{i}\ k_d (x_i^0)^T K_{d,d}^{-1} \ k_d(\cdot) = \left( \sum_{i = 1}^n \beta_{i}\ k_d (x_i^0)^T  K_{d,d}^{-1} \right) k_d(\cdot)
+$$
+
+and take the new vector of coefficients to be: $$
+\tilde \beta^T = \sum_{i = 1}^n \beta_{i}\ k_d (x_i^0)^T \left( K_d^0 \right)^{-1} = \beta^T K_{n,d} K_{d,d}^{-1}
+$$ 
+
+where $K_{n,d} \in \mathbb{R}^{n \times d}$ is the first $d$ columns of $K$ We can now rewrite $f$ as: 
+
+$$
+f = \tilde \beta^T k_d(\cdot) = \sum_{j =1}^d \tilde \beta_j  k(x_j, \cdot)
+$$
+
+We now consider the regularisation term, again we substitute $\tilde k^{(d)}$:
+
+$$
+\beta^T \tilde K^{(d)} \beta = \beta^T K_{n,d}\  K_{d,d}^{-1} \ K_{n,d}^T \ \beta = \left(\beta^T K_{n,d} \ K_{d,d}^{-1}   \right) K_{d,d}^T \left( K_{d,d}^{-T}\ K_{n,d}\ \beta \right) = \tilde \beta^T K_{d,d}^T \ \tilde \beta
+$$ 
+
+Hence we can now write our $m$-dimension optimisation problem:
+
+```{=tex}
+\begin{equation} \label{m_opt}
+(\hat{\alpha_\lambda}, \hat{\phi_\lambda}, {\tilde \beta_\lambda} ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), \tilde \beta \in \mathbb{R}^d} \ \frac{1}{2n} \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha + \sum_{j =1}^d \tilde \beta_j  k(x_j, x_i) \right), \phi \right) - \lambda \tilde \beta^T K_{d,d}^T \ \tilde \beta
+\end{equation}
+```
+
+## Question 5
+
+For this question we first need to obtain the penalty term as $\omega ^T \omega$ for some vector $\omega$. We can first obtain the eigen-decomposition of $K_{d,d}^T$:
+$$
+K_{d,d}^T = V \Lambda V^T
+$$
+Then writing $\Lambda = \Lambda^{\frac{1}{2}} \Lambda^{\frac{1}{2}} = \Lambda^{\frac{1}{2}} \left(\Lambda^{\frac{1}{2}}\right)^T$, we get
+$$
+\tilde \beta^T K_{d,d} \ \tilde \beta = \tilde \beta^T V \Lambda^{\frac{1}{2}} \left(\Lambda^{\frac{1}{2}}\right)^T V^T \tilde \beta = \omega^T \omega
+$$
+
+where $\omega^T = \tilde \beta^T V \Lambda^{\frac{1}{2}}$, or equivalently $\tilde \beta^T = \omega^T \Lambda^{- \frac{1}{2}} V^T$.
+
+Then our objective function becomes 
+
+```{=tex}
+\begin{equation}
+(\hat{\alpha_\lambda}, \hat{\phi_\lambda}, \hat \omega_\lambda ) \in \argmax{\alpha \in \mathbb{R}, \phi \in (0, \infty), \omega\in \mathbb{R}^d} \ \frac{1}{2n} \sum_{i = 1}^{n} \log f \left( y_i ; g^{-1} \left( \alpha +  \omega^T \Lambda^{- \frac{1}{2}} V^T K_{d,n} \right), \phi \right) - \lambda \omega^T \omega
+\end{equation}
+```
+
+so we can use $X' = \Lambda^{- \frac{1}{2}} V^T K_{n,d}$, where $K$ is the Gram matrix of the original data, as the input for `glmnet()` and this will give the estimated $\omega$.
+
+# Part 2
+
+This section implements the theory from Part 1 on the `wesdr` data from the `gss` package, which has the binary response variable `ret` and explanatory variables `dur`, `gly` and `bmi`
+
+```{r}
+library(dplyr)
+library(kableExtra)
+library(gss)
+data("wesdr")
+head(wesdr)
+```
+
+We also separate the explanatory and response variables and construct a testing and training set:
+```{r}
+X <- as.matrix(wesdr[,1:3])
+y <- as.vector(wesdr[,4])
+
+train <- sample(1:nrow(X), 500)
+X_train <- X[train,]
+y_train <- y[train]
+
+X_test <- X[-train,]
+y_test <- y[-train]
+```
+
+## Question 6
+
+We can now use `glmnet` to write a function implementing Question 4 and 5:
+
+```{r}
+library(kernlab)
+library(glmnet)
+estimate <- function(X, y, lambda, c, m){
+  d <- m - 1
+  K <- kernelMatrix(kernel = rbfdot(c), x = X)
+  K_d <- K[1:d, 1:d]
+  
+  K_eigen <- eigen(K_d)
+  V <- K_eigen$vectors
+  Lambda <- (K_eigen$values)
+  
+  K_nd <- K[1:d,]
+  X_new <- diag(1/sqrt(Lambda)) %*% t(V) %*% K_nd
+  
+
+  fit <- glmnet(t(X_new), y, family = "binomial", alpha = 0, lambda = lambda)
+  
+  alpha <- fit$a0
+  omega <- as.vector(fit$beta)
+  
+  beta <- omega %*% diag(1/sqrt(Lambda)) %*% t(V)
+  
+  values <- list("alpha" = alpha, "beta" = beta, "fit" = fit)
+  return(values)
+}
+
+```
+
+
+## Question 7
+
+For certain values of $m$, $c$ and $lambda$ the `X_new` matrix contains some `NaN` values, for example we try the following values:
+```{r, error=TRUE}
+c <- 1e-04
+m <- 60
+lambda <- 0.1
+epsilon = 0.001
+
+estimate <- estimate(X, y, lambda, c, m)
+```
+This is because some of the eigenvalues of $K$ are small enough that they are represented as `0` in a floating point number. To remedy this we can replace the kernel matrix with the altered $K_d' = K_d + epsilon I$ for a small $\epsilon$ 
+
+```{r}
+estimate_new <- function(X, y, lambda, c, m, epsilon = 0.001){
+  d <- m - 1
+  K <- kernelMatrix(kernel = rbfdot(c), x = X)
+  K_d <- K[1:d, 1:d] + epsilon* diag(rep(1,d))
+  
+  K_eigen <- eigen(K_d)
+  V <- K_eigen$vectors
+  Lambda <- (K_eigen$values)
+  
+  K_nd <- K[1:d,]
+  X_new <- diag(1/sqrt(Lambda)) %*% t(V) %*% K_nd
+  
+
+  fit <- glmnet(t(X_new), y, family = "binomial", alpha = 0, lambda = lambda)
+  
+  alpha <- fit$a0
+  omega <- as.vector(fit$beta)
+  
+  beta <- omega %*% diag(1/sqrt(Lambda)) %*% t(V)
+  
+  values <- list("alpha" = alpha, "beta" = beta, "fit" = fit)
+  return(values)
+}
+```
+
+and we can see now that this does not produce any errors
+```{r}
+estimate <- estimate_new(X_train, y_train, lambda, c, m)
+```
+
+## Question 8
+
+Here we want to choose $\lambda$ using cross-validation, the `glmnet` package enables us to do this using the `cv.glmnet()` function, which uses the deviance to perform $k$-fold cross-validation. We use the following function to obtain the solution to (\ref{m_opt}) for the cross-validated value of $\lambda$:
+
+```{r}
+lambda_cv_estimate <- function(X, y, c, m,  epsilon = 0.01){
+  d <- m - 1
+  K <- kernelMatrix(kernel = rbfdot(c), x = X)
+  K_d <- K[1:d, 1:d] 
+  
+  K_eigen <- eigen(K_d)
+  
+  V <- K_eigen$vectors
+  Lambda <- (K_eigen$values) + epsilon * (rep(1,d))
+  
+  K_nd <- K[1:d,]
+  X_new <- diag(1/sqrt(Lambda)) %*% t(V) %*% K_nd
+  
+  cv_fit <- cv.glmnet(t(X_new), y, family = "binomial", alpha = 0)
+  
+  lambda <- cv_fit$lambda.min
+  lambda_ind <- cv_fit$index[1]
+  
+  fits <- cv_fit$glmnet.fit
+  
+  alpha <- fits$a0[lambda_ind]
+  omega <- as.vector(fits$beta[,lambda_ind])
+  
+  beta <- omega %*% diag(1/sqrt(Lambda)) %*% t(V)
+  
+  values <- list("alpha" = alpha, "beta" = beta, "lambda" = lambda, "cvm" = cv_fit$cvm[lambda_ind], "fit" = fits, "K" = K)
+  return(values)
+}
+
+```
+
+```{r}
+fit <- lambda_cv_estimate(X, y, 1, 100)
+```
+
+## Question 9
+
+We can now use the function from \textbf{Question 8} to write a function which performs a grid search to choose the optimal value for `c`:
+
+```{r}
+c_cv_estimate <- function(X, y, m){
+  c = c(0.0001, 0.0005, 0.0008, 0.001, 0.003, 0.005, 0.01, 0.05, seq(0.1, 1, 0.1), 1.5,2, 2.5)
+  
+  l <- length(c)
+    
+  alphas <- numeric(l)
+  betas <- matrix(nrow = l, ncol = m - 1)
+  
+  lambdas <- numeric(l)
+  cvms <- numeric(l)
+
+  fits <- vector(mode = "list", length = l)
+  
+  Ks <- vector(mode = "list", length = l)
+  
+  for (i in 1:l) {
+    est <- lambda_cv_estimate(X, y, c[i], m)
+    
+    alphas[i] <- est$alpha
+    betas[i,] <- est$beta 
+    
+    lambdas[i] <- est$lambda
+    cvms[i] <- est$cvm
+     
+    fits[[i]] <- est$fit
+    
+    Ks[[i]] <- est$K 
+  }
+  
+  min_ind <- which.min(cvms)
+  
+  values <- list("alpha" = alphas[min_ind], "beta" = betas[min_ind, ], "lambda" = lambdas[min_ind], "c" = c[min_ind], cvm = cvms[min_ind], "fit" = fits[[min_ind]], "K" = Ks[[min_ind]])
+  return(values)
+}
+
+```
+
+
+We can now use the training dataset to obtain the solution when `c` and `lambda` are chosen with cross-validation:
+
+```{r}
+
+parameters <- c_cv_estimate(X_train, y_train, m =150)
+```
+
+## Question 10
+
+We can now use the output of the function above, the training set and test set to produce the estimated response vector for the test set: for various a range of `m` values
+
+```{r}
+set.seed(1)
+m <- c(10,20,30,50,70,100,150,200,300)
+n <- length(m)
+
+responses <- matrix(nrow = length(y_test), ncol = n)
+for (i in 1:n){
+  model <-  c_cv_estimate(X_train, y_train, m[i])
+  
+  fit <- model$fit
+  
+  c <- model$c
+  
+  K <- model$K
+  d <- m[i] -1
+  K_d <- K[1:d, 1:d] 
+  
+  K_eigen <- eigen(K_d)
+  
+  V <- K_eigen$vectors
+  Lambda <- (K_eigen$values) + epsilon * rep(1,d)
+  
+  K_prime <- kernelMatrix(kernel = rbfdot(c), x = X_test, y = X_train)
+  K_prime_ld <- K_prime[,1:d]
+  
+  
+  X_test_new <-  diag(1/sqrt(Lambda)) %*% t(V) %*% t(K_prime_ld)
+  
+  omega <- model$beta %*% V %*% diag(sqrt(Lambda))
+  eta <- model$alpha + t(X_test_new) %*% t(omega)
+  
+  pred_response <-round(1 / (1+ exp(-eta)))
+  
+  responses[,i] <- pred_response
+}
+
+```
+
+We can now plot the predicted errors for different values of `m`:
+```{r}
+library(dplyr)
+pred_error <- colMeans(abs(responses - y_test))
+
+plot_dat <- cbind("m" = m, "Prediction Error" = pred_error) %>%
+  as_tibble()
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(plot_dat) +
+  geom_line(aes(x = m, y = pred_error), color = "steelblue3")  
+```
+We can see the lowest prediction error is at `m = 150`, with a value of $\approx 0.28$, hence we can get a prediction that performs better than a guess but is still not excellent. 
+
+## Question 11
+We can use a GAM to approximate the model given in (\ref{model}):
+```{r}
+library(mgcv)
+
+fit_gam <- gam(ret ~ s(dur, bs = "cr") + s(gly, bs = "cr") + s(bmi, bs = "cr"), data = wesdr[train,], family = "binomial")
+
+test_pred <- predict(fit_gam, wesdr[-train,], type = "response")
+
+gam_error <- mean(abs(round(test_pred) - y_test))
+gam_error
+```
+We can see here the prediction error is very similar and there doesn't seem to be much different within the models

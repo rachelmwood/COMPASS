@@ -1,0 +1,61 @@
+---
+title: "Rcpp Portfolio"
+author: "Rachel Wood"
+date: "2023-03-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+For this portfolio, we use Rcpp to fit an adaptive kernel smoothing regression model. 
+
+We first generate data according to the model
+$$
+y_i = \sin (\alpha \pi x^3) + z_i \hspace{0.2cm} \text{ with } \hspace{0.2cm} z_i \sim \mathcal{N} (0, \sigma^2)
+$$
+
+In this case we take $\alpha = 4$ and $\sigma = 0.2$.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+n <- 400 
+alpha <- 4
+sigma <- 0.2
+
+x <- runif(n)
+y <- sin(alpha * pi * x^3) + rnorm(n, sd = sigma)
+
+data <- tibble(x = x, y =y)
+
+ggplot(data = data, aes(x, y))+
+  geom_point(color = "steelblue")
+```
+
+# The Kernel Smoother
+
+We model $\mu(x) = \mathbb{E}  (y|x)$ by
+$$
+\hat \mu (x) = \frac{\sum_{i=1}^n \kappa_\lambda(x,x_i)y_i}{\sum_{i=1}^n \kappa_\lambda(x,x_i)}
+$$
+where we take $\kappa_\lambda$ to be a Gaussian kernel with variance $\lambda^2$.
+
+We implement this with the following function:
+
+```{r}
+meanKRS <- function(y, x, xnew, lambda){
+  n <- length(x)
+  nnew <- length(xnew)
+  
+  mu <- numeric(nnew)
+  
+  for (i in 1:nnew){
+    adfa
+  }
+}
+```
+
