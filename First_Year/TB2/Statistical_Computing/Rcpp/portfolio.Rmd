@@ -2,13 +2,34 @@
 title: "Rcpp Portfolio"
 author: "Rachel Wood"
 date: "2023-03-27"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
+  pdf_document: 
+    highlight: tango
+header-includes: 
+  - \usepackage{tikz}
+  - \usepackage{fvextra}
+  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}    
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 library(ggplot2)
 theme_set(theme_bw())
+scale_colour_discrete <- function(){
+  scale_colour_manual(values = c("mediumorchid3", "darkseagreen3", "lightpink2"))
+}
+
+knitr::opts_knit$set(dev = 'pdf',
+              pdf.options(encoding = "ISOLatin9.enc"),
+              message = FALSE,
+              warning = FALSE,
+              tidy.opts = list(width.cutoff=50), tidy=TRUE,
+              fig.pos ="H", out.width = '60%',
+              fig.align = 'center'
+              )
+
 ```
 
 For this portfolio, we use Rcpp to fit an adaptive kernel smoothing regression model. 
@@ -33,7 +54,7 @@ y <- sin(alpha * pi * x^3) + rnorm(n, sd = sigma)
 data <- tibble(x = x, y =y)
 
 ggplot(data = data, aes(x, y))+
-  geom_point(color = "steelblue")
+  geom_point(size = 0.8)
 ```
 
 # The Kernel Smoother
@@ -47,15 +68,185 @@ where we take $\kappa_\lambda$ to be a Gaussian kernel with variance $\lambda^2$
 We implement this with the following function:
 
 ```{r}
-meanKRS <- function(y, x, xnew, lambda){
+meanKRS <- function(x, y, xnew, lambda){
   n <- length(x)
   nnew <- length(xnew)
   
   mu <- numeric(nnew)
   
   for (i in 1:nnew){
-    adfa
+    mu[i] <- sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda))
   }
+  
+  return(mu)
+}
+```
+
+We can now compare the fits for different values of $\lambda$:
+```{r}
+library(tidyr)
+xnew <- seq(0,1, length.out = 1000)
+
+smooth_large <- meanKRS(x, y, xnew, lambda = 0.06)
+smooth_medium <- meanKRS(x, y, xnew, lambda = 0.04)
+smooth_small <- meanKRS(x, y, xnew, lambda = 0.02)
+
+plot_data <- tibble(x = xnew) %>%
+  mutate("0.06" = smooth_large,
+         "0.04" = smooth_medium,
+         "0.02" = smooth_small) %>%
+  pivot_longer(cols = c("0.06","0.04","0.02"),
+               names_to = "lambda",
+               values_to = "fitted") %>%
+  mutate(lambda = as.factor(lambda)) 
+
+ggplot() +
+  geom_point(data = data,
+             aes(x, y), size = 0.8) +
+  geom_line(data = plot_data, 
+            aes(x, fitted, color = lambda), linewidth = 0.7)
+```
+We now use Rcpp to write a C++ version of `meanKRS()`:
+```{r}
+library(Rcpp)
+
+```
+
+```{r, engine='Rcpp'}
+#include <Rcpp.h>
+#include <Rmath.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+
+NumericVector meanKRS_Rcpp(const NumericVector x, const NumericVector y, const NumericVector xnew, const double lambda) {
+  int n = x.size();
+  int nnew = xnew.size();
+  
+  NumericVector mu(nnew);
+  
+  for (int i = 0; i < nnew; i++){
+    mu[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
+  }
+  
+  return mu;
+}
+```
+
+We check that this function produces the same output as the R version, 
+
+```{r}
+max(meanKRS(x, y, xnew, lambda = 0.06) - meanKRS_Rcpp(x, y, xnew, lambda = 0.06))
+```
+and compare the performance of the two functions using the `microbenchmark()` function:
+```{r}
+library(microbenchmark)
+microbenchmark("R" = meanKRS(x, y, xnew, lambda = 0.06),
+               "Rcpp" = meanKRS_Rcpp(x, y, xnew, lambda = 0.06))
+```
+
+# Cross-Validation
+
+We now implement a cross-validation procedure for finding the optimal $\lambda$, using the mean squared error of the test set as the metric for determining the fit of our model. We first write the R version of this function:
+```{r}
+mse_lambda <- function(log_lambda, x, y, x_new, y_new){
+  lambda <- exp(log_lambda)
+  
+  fitted <- meanKRS(x, y, x_new, lambda)
+  return(sum((fitted - y_new)^2))
+}
+
+lambda_cv <- function(x, y, nfolds = 5){
+  n <- length(x)
+  groups <- sample(rep(1:nfolds, length.out = n), size = n)
+  
+  lambdas <- numeric(nfolds)
+  mse <- numeric(nfolds)
+  
+  for (i in 1:nfolds){
+    x_train <- x[groups != i]
+    y_train <- y[groups != i]
+    
+    x_test <- x[groups == i]
+    y_test <- y[groups == i]
+    
+    solution <- optim(par = 0.02, fn = mse_lambda, x = x_train, y = y_train, x_new = x_test, y_new =  y_test, method = "BFGS")
+    lambdas[i] <- exp(solution$par)
+    mse[i] <- solution$value
+    
+  }
+  
+ min_ind <- which.min(mse)
+ return(lambdas[min_ind])
+}
+```
+
+We now plot the smooth for the returned value $\lambda$ to see if this seems reasonable:
+```{r}
+hat_lambda <- lambda_cv(x, y)
+opt_smooth <- meanKRS(x, y, xnew, hat_lambda)
+opt_data <- tibble(xnew = xnew,
+         fitted = opt_smooth)
+ggplot() +
+  geom_point(data = data, aes(x, y), size = 0.8) +
+  geom_line(data = opt_data, aes(x = xnew,y = fitted), 
+            color = "mediumorchid3", linewidth = 0.7)
+```
+
+We now write the equivalent function in Rcpp:
+```{r, engine='Rcpp'}
+// [[Rcpp::depends(RcppEigen)]]
+// [[Rcpp::depends(RcppNumerical)]]
+
+#include <Rcpp.h>
+#include <Rmath.h>
+#include <RcppNumerical.h>
+using namespace Rcpp;
+using namespace Numer;
+
+NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const NumericVector xnew, const double lambda) {
+  int n = x.size();
+  int nnew = xnew.size();
+  
+  NumericVector mu(nnew);
+  
+  for (int i = 0; i < nnew; i++){
+    mu[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
+  }
+  
+  return mu;
+}
+
+double mse_Rcpp(const double log_lambda, const NumericVector x, const NumericVector y, const NumericVector x_new, const NumericVector y_new){
+  double lambda = exp(log_lambda);
+  
+  NumericVector fitted = meanKRS_Rcpp_I(x, y, x_new, lambda);
+  
+  int value = sum(pow(fitted - y_new, 2));
+  return value;
+}
+
+
+// [[Rcpp::export]]
+
+double lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const double nfolds = 5){
+  int n = x.size();
+  
+  NumericVector groups = sample(rep_len(seq(1, nfolds), n), n, replace = false);
+  
+  NumericVector lambdas(nfolds);
+  NumericVector mse(nfolds);
+  
+  for (i =1; i <= nfolds; i++){
+    NumericVector x_train = x[groups != i];
+    NumericVector y_train = y[groups != i];
+    
+    NumericVector x_test = x[groups == i];
+    NumericVector y_test = y[groups == i];
+    
+    opt = optim_lbfgs(f = function(x){mse_Rcpp(x, x_train, y_train, x_test, y_test)}, double x = 0.02, double opt_mse)
+  }
+  return opt;
 }
 ```
 
