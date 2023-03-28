@@ -128,9 +128,12 @@ grid.arrange(original_V_plot, similar_V_plot, U_plot, nrow = 2)
 ```
 
 
+
+
+
 ### Predicting the Transformed Data from the Original
 
-```{r}
+```{r, eval = FALSE}
 original_scan <- Clarity_Scan(original_dist)
 
 similar_predict <- Clarity_Predict(similar_dist, original_scan)

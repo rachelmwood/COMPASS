@@ -1,0 +1,89 @@
+---
+title: "Dental example"
+author: "Rachel Wood"
+date: "2023-03-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in data
+```{r}
+library(readxl)
+gene_mat <- read_xlsx("gene_data.xlsx", row)
+dental_mat <- read_xlsx("dental_data.xlsx")
+```
+
+Get similarity matrices:
+```{r}
+library(Clarity)
+gene_sim <- c_dist(gene_mat)
+dental_sim <- c_dist(dental_mat[-c(21,22),])
+
+joint_sim <- cbind(gene_sim, dental_sim)
+```
+
+UASE functions:
+```{r}
+UASE_right <- function(A,d = 2, K){
+  svd <- svd(A)
+  Y <- svd$v %*% diag(sqrt(svd$d))
+  Y <- Y[,1:d]
+  t <- rep(1:K, each = nrow(A))
+  data <- rep(1:nrow(A),K)
+  Y <- as.data.frame(cbind(Y,as.factor(t), as.factor(data)))
+  colnames(Y) <- c(1:d,"time", "data_point")
+  return(Y)
+}
+
+UASE_left <- function(A,d = 2, K){
+  svd <- svd(A)
+  Y <- svd$u %*% diag(sqrt(svd$d))
+  Y <- Y[,1:d]
+ 
+  Y <- as.data.frame(cbind(Y))
+  colnames(Y) <- c(1:d)
+  return(Y)
+}
+```
+
+Get UASE embeddings:
+```{r}
+right <- UASE_right(joint_sim, K = 2)
+left <- UASE_left(joint_sim, K = 2) %>%
+  as_tibble() %>%
+  mutate(Region = as.factor(gene_mat$Pop))
+
+gene_V <- right[1:20,] %>% 
+  as_tibble() %>%
+  mutate(Region = as.factor(gene_mat$Pop))
+dental_V <- right[21:40,] %>%
+  as_tibble() %>%
+  mutate(Region = as.factor(gene_mat$Pop))
+
+```
+
+Plots: 
+```{r}
+library(gridExtra)
+U_plot <- ggplot(left, aes( x= `1`,y = `2`, color = Region)) +
+  geom_point() +
+  scale_colour_discrete(guide = guide_legend(ncol = 3, label.theme = element_text(size= 8)))
+  
+gene_V_plot <- ggplot(gene_V, aes( x= `1`,y = `2`, color = Region)) +
+  geom_point() + 
+  theme(legend.position = "none")
+dental_V_plot <- ggplot(dental_V, aes( x= `1`,y = `2`, color = Region)) +
+  geom_point()+ 
+  theme(legend.position = "none")
+
+lay <- rbind(c(1,2),
+             c(3,3))
+grid.arrange(gene_V_plot, dental_V_plot, U_plot, layout_matrix = lay)
+```
+
+
+
+

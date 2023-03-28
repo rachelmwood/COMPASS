@@ -1,0 +1,78 @@
+---
+title: "LA with RcppArmadillo"
+author: "Rachel Wood"
+date: "2023-03-28"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: 
+    highlight: tango
+header-includes: 
+  - \usepackage{tikz}
+  - \usepackage{fvextra}
+  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}} 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(ggplot2)
+library(viridis)
+theme_set(theme_bw())
+scale_fill_continuous <- function(){
+  scale_fill_viridis(option = "plasma", begin = 0.2)
+}
+knitr::opts_knit$set(message = FALSE,
+              warning = FALSE,
+              tidy.opts = list(width.cutoff=50), tidy=TRUE,
+              fig.pos ="H", out.width = '60%',
+              fig.align = 'center'
+              )
+```
+
+This portfolio aims to perform smoothing with RcppArmadillo, using local polynomial regression. 
+
+We load the relevant data on solar power production in Australia:
+```{r}
+library(dplyr)
+load("solarAU.RData")
+head(solarAU)
+solarAU <- as_tibble(solarAU)
+```
+We work with the log of the production as it is less skewed (adding 0.01 to all entries to avoid numerical errors)
+```{r}
+solarAU <- solarAU %>%
+  mutate(logProduction = log(prod + 0.01))
+```
+
+
+We can now plot the production in a 2d summary:
+```{r}
+library(ggplot2)
+library(viridis)
+ggplot(solarAU,
+       aes(x = toy, y = tod, z = logProduction)) +
+       stat_summary_2d() 
+```
+
+We can see there is greater solar production in the middle of the day and in the winter, which is to be expected. 
+
+# Linear Model
+
+We consider the following model:
+$$
+\mathbb{E}(y|x) = \beta_0 + \beta_1\text{tod} + \beta_2\text{tod}^2 + \beta_3\text{toy} + \beta_4\text{toy}^2 
+$$
+We can use R to solve this easily:
+```{r}
+fit <- lm(logProduction ~ tod + I(tod^2) + toy + I(toy^2), data = solarAU)
+```
+
+## Using RcppArmadillo
+We now want to use RcppArmadillo to fit the same model, taking as input 
+```{r}
+X <- with(solarAU)
+```
+
+
+
+

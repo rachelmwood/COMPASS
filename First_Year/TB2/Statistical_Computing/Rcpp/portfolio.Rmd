@@ -194,16 +194,16 @@ ggplot() +
 ```
 
 We now write the equivalent function in Rcpp:
-```{r, engine='Rcpp'}
-// [[Rcpp::depends(RcppEigen)]]
+```{r, engine='Rcpp', warnings = FALSE}
 // [[Rcpp::depends(RcppNumerical)]]
+// [[Rcpp::depends(RcppEigen)]]
 
-#include <Rcpp.h>
 #include <Rmath.h>
 #include <RcppNumerical.h>
 using namespace Rcpp;
 using namespace Numer;
 
+// [[Rcpp::export]]
 NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const NumericVector xnew, const double lambda) {
   int n = x.size();
   int nnew = xnew.size();
@@ -217,6 +217,7 @@ NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const
   return mu;
 }
 
+// [[Rcpp::export]]
 double mse_Rcpp(const double log_lambda, const NumericVector x, const NumericVector y, const NumericVector x_new, const NumericVector y_new){
   double lambda = exp(log_lambda);
   
@@ -228,25 +229,26 @@ double mse_Rcpp(const double log_lambda, const NumericVector x, const NumericVec
 
 
 // [[Rcpp::export]]
-
 double lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const double nfolds = 5){
   int n = x.size();
   
   NumericVector groups = sample(rep_len(seq(1, nfolds), n), n, replace = false);
-  
+  /*
   NumericVector lambdas(nfolds);
   NumericVector mse(nfolds);
   
-  for (i =1; i <= nfolds; i++){
+  for (int i =1; i <= nfolds; i++){
     NumericVector x_train = x[groups != i];
     NumericVector y_train = y[groups != i];
     
     NumericVector x_test = x[groups == i];
     NumericVector y_test = y[groups == i];
     
-    opt = optim_lbfgs(f = function(x){mse_Rcpp(x, x_train, y_train, x_test, y_test)}, double x = 0.02, double opt_mse)
+   // opt = optim_lbfgs(f = function(x){mse_Rcpp(x, x_train, y_train, x_test, y_test)}, double x = 0.02, double opt_mse)
   }
-  return opt;
+  */
+  return 0;
 }
+
 ```
 
