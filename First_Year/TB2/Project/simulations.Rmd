@@ -30,7 +30,9 @@ original <- simulateCoalescent(n,k,
                          alpha=0,
                          minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
 
-similar <- transformCoalescent(original)
+similar <- mixCoalescent(original,fraction=1)
+
+
      
 labels <- original$A %*% as.vector(1:10)
 ```
@@ -63,9 +65,9 @@ UASE_right <- function(A,d = 2, K){
   Y <- Y[,1:d]
   t <- rep(1:K, each = nrow(A))
   data <- rep(1:nrow(A),K)
-  x <- c(rep(1,nrow(A)/2), rep(0,nrow(A)/2))
-  Y <- as.data.frame(cbind(Y,as.factor(t), as.factor(data),as.factor(x)))
-  colnames(Y) <- c(1:d,"time", "data_point", "community")
+  
+  Y <- as.data.frame(cbind(Y,as.factor(t), as.factor(data)))
+  colnames(Y) <- c(1:d,"discipline", "data_point")
   return(Y)
 }
 
@@ -73,11 +75,8 @@ UASE_left <- function(A,d = 2, K){
   svd <- svd(A)
   Y <- svd$u %*% diag(sqrt(svd$d))
   Y <- Y[,1:d]
-  # t <- rep(1:K, each = nrow(A))
-  # data <- rep(1:nrow(A),K)
-  x <- c(rep(1,nrow(A)/2), rep(0,nrow(A)/2))
-  Y <- as.data.frame(cbind(Y,as.factor(x)))
-  colnames(Y) <- c(1:d, "community")
+  Y <- as.data.frame(Y)
+  colnames(Y) <- c(1:d)
   return(Y)
 }
 ```
@@ -92,10 +91,9 @@ library(gridExtra)
 U <- UASE_left(joint_dist, K = 2)
 V <- UASE_right(joint_dist, K= 2)
 
-U <- cbind(U, group = labels) %>%
+U <- U %>%
   as_tibble() %>%
   mutate(labels = as.factor(labels))
-V <- cbind(V, group = labels)
 
 original_V <- V[1:n,] %>%
   as_tibble() %>%
@@ -110,45 +108,69 @@ original_V_plot <- ggplot(original_V, aes(`1`,`2`, color = labels)) +
   geom_point(alpha = 0.5) +
   geom_jitter() +
   scale_color_viridis_d(option = "turbo") + 
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  labs(title = "V Discipline 1")
 
 similar_V_plot <- ggplot(similar_V, aes(`1`,`2`, color = labels)) +
   geom_point(alpha = 0.5) +
   geom_jitter() +
   scale_color_viridis_d(option = "turbo") + 
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  labs(title = "V Discipline 2")
 
 U_plot <- ggplot(U, aes(`1`,`2`, color = labels)) +
   geom_point(alpha = 0.5) +
   geom_jitter() +
-  scale_color_viridis_d(option = "turbo") + 
-  theme(legend.position = "none")
+  scale_color_viridis_d(option = "turbo", guide = guide_legend(ncol = 3, label.theme = element_text(size= 8))) +
+  labs(title = "U")
 
-grid.arrange(original_V_plot, similar_V_plot, U_plot, nrow = 2)
+lay <- rbind(c(1,2),
+             c(3,3))
+grid.arrange(original_V_plot, similar_V_plot, U_plot, layout_matrix = lay)
 ```
 
+   
+```{r eval=FALSE, include=FALSE}
+U_groups <- U %>% 
+  filter(labels == c(1,2,3,4))
 
-
-
-
-### Predicting the Transformed Data from the Original
-
-```{r, eval = FALSE}
-original_scan <- Clarity_Scan(original_dist)
-
-similar_predict <- Clarity_Predict(similar_dist, original_scan)
-
-similar_compare <- Clarity_Compare(original_scan, D = original$D, Dnew = similar$D, nbs = 200, H0="structure")
+ggplot(U_groups, aes(`1`,`2`, color = labels)) +
+  geom_point(alpha = 0.2) +
+  geom_jitter()  +
+  scale_color_viridis_d(option = "turbo", guide = guide_legend(ncol = 3, label.theme = element_text(size= 8))) 
+  
 ```
+
+### Clustering 
+Get UPMGA tree from U with different values of d
 
 ```{r}
+library(ggdendro)
+library(dendextend)
+
+D <- 5
+par(mfcol = c(2,3))
+plot(original$tree)
+plot(similar$tree)
+UPGMA_plots <- vector(mode = "list", D-1)
+for (i in 2:D){
+  U_d <- UASE_left(joint_dist, d = i,K = 2)
+  U_dist <- dist(U_d[,1:i])
+  
+  U_UPGMA <- hclust(U_dist, method = "average", members = labels)
+  dend <- as.dendrogram(U_UPGMA)
+  labels_colors(dend) <- labels[U_UPGMA$order]
+  plot(dend, horiz = TRUE)
+  title(paste("d =", i))
+}
 
 
-
-
-plot(similar_predict)
 
 ```
+
+
+
+
 
 ## With Mixtures
 
