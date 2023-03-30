@@ -2,8 +2,10 @@
 title: "Linux Command Line"
 author: "Rachel Wood"
 date: "2023-03-22"
-output: 
+output:
   pdf_document: 
+    highlight: espresso
+  html_document: 
     highlight: espresso
 header-includes: 
   - \usepackage{tikz}
@@ -15,7 +17,7 @@ header-includes:
 library(formatR)
 library(knitr)
 library(highr)
-
+opts_chunk$set(eval = FALSE, engine = 'bash')
 hook_output = knit_hooks$get('source',)
 opts_knit$set(dev = 'pdf',
               pdf.options(encoding = "ISOLatin9.enc"),
@@ -24,7 +26,7 @@ opts_knit$set(dev = 'pdf',
               tidy.opts = list(width.cutoff=50), tidy=TRUE,
               fig.pos ="H", out.width = '60%',
               fig.align = 'center',
-              root.dir = "/home/ac18826/Documents/COMPASS/First_Year/TB2/Statistical_Computing/Intro to Linux/Portfolio/"
+              root.dir = "/home/ac18826/Documents/COMPASS/First_Year/TB2/Statistical_Computing/Intro_to_Linux/Portfolio/"
               )
 ```
 
@@ -66,7 +68,7 @@ mv GCF_009858895.2_ASM985889v3_genomic.fna.gz -t bioinf_ex/
 cd bioinf_ex/
 ```
 ```{r, include=FALSE}
-opts_knit$set(root.dir ="/home/ac18826/Documents/COMPASS/First_Year/TB2/Statistical_Computing/Intro to Linux/Portfolio/bioinf_ex/")
+opts_knit$set(root.dir ="/home/ac18826/Documents/COMPASS/First_Year/TB2/Statistical_Computing/Intro_to_Linux/Portfolio/bioinf_ex/")
 ```
 We now check these files have been successfully moved:
 ```{r, engine ='bash', eval = FALSE}
@@ -89,4 +91,30 @@ GCF_009858895.2_ASM985889v3_genomic.fna
 GCF_009858895.2_ASM985889v3_protein.fa
 ```
 
+We finally rename the files to something more convenient with the `mv` command:
 
+```{bash}
+mv GCF_009858895.2_ASM985889v3_genomic.fna genomic.fna
+mv GCF_009858895.2_ASM985889v3_protein.faa protein.faa
+```
+
+# Genomic Data
+
+This section focuses on the genomic.fna file. We first use the `head` command to view the first few lines of the file:
+```{bash}
+head genomic.fna
+NC_045512.2 Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome
+ATTAAAGGTTTATACCTTCCCAGGTAACAAACCAACCAACTTTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAA
+AATCTGTGTGGCTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTGACAGG
+ACACGAGTAACTCGTCTATCTTCTGCAGGCTGCTTACGGTTTCGTCCGTGTTGCAGCCGATCATCAGCACATCTAGGTTT
+CGTCCGGGTGTGACCGAAAGGTAAGATGGAGAGCCTTGTCCCTGGTTTCAACGAGAAAACACACGTCCAACTCAGTTTGC
+CTGTTTTACAGGTTCGCGACGTGCTCGTACGTGGCTTTGGAGACTCCGTGGAGGAGGTCTTATCAGAGGCACGTCAACAT
+CTTAAAGATGGCACTTGTGGCTTAGTAGAAGTTGAAAAAGGCGTTTTGCCTCAACTTGAACAGCCCTATGTGTTCATCAA
+ACGTTCGGATGCTCGAACTGCACCTCATGGTCATGTTATGGTTGAGCTGGTAGCAGAACTCGAAGGCATTCAGTACGGTC
+GTAGTGGTGAGACACTTGGTGTCCTTGTCCCTCATGTGGGCGAAATACCAGTGGCTTACCGCAAGGTTCTTCTTCGTAAG
+AACGGTAATAAAGGAGCTGGTGGCCATAGTTACGGCGCCGATCTAAAGTCATTTGACTTAGGCGACGAGCTTGGCACTGA
+
+```
+
+We might want to know how long a geno
+me is, this is often measured by the number of base pairs, here each pair is represented by a character - a base pair is either \texttt{A-T} or \texttt{G-C}. We use the \texttt{grep} command using the \texttt{-o} flag instead combined with the \texttt{wc} command to get the count of \texttt{A}, \texttt{C}, \texttt{G} or \texttt{T} characters in the file (excluding the header line):
