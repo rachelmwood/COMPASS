@@ -3,14 +3,14 @@ title: "Linux Command Line"
 author: "Rachel Wood"
 date: "2023-03-22"
 output:
-  pdf_document: 
+  html_document:
     highlight: espresso
-  html_document: 
+  pdf_document:
     highlight: espresso
-header-includes: 
-  - \usepackage{tikz}
-  - \usepackage{fvextra}
-  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+header-includes:
+- \usepackage{tikz}
+- \usepackage{fvextra}
+- \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
 ---
 
 ```{r setup, include=FALSE}
@@ -116,5 +116,51 @@ AACGGTAATAAAGGAGCTGGTGGCCATAGTTACGGCGCCGATCTAAAGTCATTTGACTTAGGCGACGAGCTTGGCACTGA
 
 ```
 
-We might want to know how long a geno
-me is, this is often measured by the number of base pairs, here each pair is represented by a character - a base pair is either \texttt{A-T} or \texttt{G-C}. We use the \texttt{grep} command using the \texttt{-o} flag instead combined with the \texttt{wc} command to get the count of \texttt{A}, \texttt{C}, \texttt{G} or \texttt{T} characters in the file (excluding the header line):
+We might want to know how long a genome is, this is often measured by the number of base pairs, here each pair is represented by a character - a base pair is either \texttt{A-T} or \texttt{G-C}. We use the \texttt{grep} command using the \texttt{-o} flag instead combined with the \texttt{wc} command to get the count of \texttt{A}, \texttt{C}, \texttt{G} or \texttt{T} characters in the file (excluding the header line):
+```{bash}
+tail -n+2 genomic.fna | grep -o [ATCG] | wc -l
+29903
+```
+The square brackets indicate that we want want the count of any of these letters instead of the pattern `ATGC`
+
+We can use similar commands to obtain the individual counts of the letters:
+
+```{bash}
+tail -n+2 genomic.fna | grep -o A | wc -l
+8954
+tail -n+2 genomic.fna | grep -o T | wc -l
+9594
+tail -n+2 genomic.fna | grep -o C | wc -l
+5492
+tail -n+2 genomic.fna | grep -o G | wc -l
+5863
+```
+
+From this we can see the genome is \texttt{A-T} enriched. 
+
+The start codon Methionine is represented by \texttt{ATG}, we can see how many times this appears. 
+
+For this we first need to remove the header line and all new lines  characters (denoted `\n`) and save the changes in a new file:
+```{bash}
+tail -n+2 genomic.fna > genomic_new.fna
+echo -n $(tr -d "\n" < genomic_new.fna) > genomic_new.fna 
+```
+
+Note the use of `echo`, this creates a subshell, which allows us to read from and write to the same file.
+
+We can now search for the Methionine codon, using the `grep` command again,
+```{bash}
+grep -o ATG genomic_new.fna | wc -l
+725
+```
+
+The covid nucleocapsid phosphoprotein starts with the motif ATGTCTGATAAT and ends with AACTCAGGCCTA. We want to isolate this gene, so find the character position of the character before the start of the patterns using `grep -b` (the `-b` indicates we want the byte off-set)
+```{bash}
+grep -aob ATGTCTGATAAT genomic_new.fna 
+28273:ATGTCTGATAAT
+
+grep -ob AACTCAGGCCTA genomic_new.fna 
+29520:AACTCAGGCCTA
+```
+
+We can now write the gene to a new file 
