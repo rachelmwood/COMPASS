@@ -1,0 +1,72 @@
+---
+title: "Comparing CLARITY, Omnibus Embedding and UASE"
+author: "Rachel Wood"
+date: "2023-03-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(1234)
+```
+
+This document's goals are two-fold:
+
+- Looking at how well different methods perform in identifying changes in the structure of data.
+- Finding the way UASE embeddings change with scaling and mixing changes to the underlying generating tree structure.
+- Identify a performance metric with which we can compare these different methods
+
+# Data generation
+
+We use the `ClaritySim` package to create the `original' data generated according to some tree structure, which we will then manipulate to test the different methods:
+
+```{r}
+library(ClaritySim)
+n=100 
+k=10
+original <- simulateCoalescent(n,k,
+                         sigma0=0.0001,
+                         Amodel="uniform",
+                         alpha=0,
+                         minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
+plot(original$tree)
+```
+
+We can now manipulate the data in a series of ways.
+
+## Tree Scaling
+
+```{r}
+scaled <- transformCoalescent(original)
+plot(scaled$tree)
+```
+
+## Mixture
+
+```{r, eval=FALSE}
+mixed <- mixCoalescent(original, fraction = 1)
+mixture <- mixed$edges
+
+library(ape)
+library(glottoTrees)
+
+plot(mixed$tree)
+edges(mixture[2], mixture[1],arrows = 1)
+tree <- makeNodeLabel(tree)
+tree <- move_tip(tree, "t10", tree$node.label)
+
+```
+
+## Moving a node
+
+```{r, eval= FALSE}
+tree <- as.phylo(original$tree)
+tree <- makeNodeLabel(tree)
+
+tip <- sample(1:10, 2)
+
+parent <- sample(tip:9, N:Node)
+tree <- move_node(tree, tree$node.label[tip], tree$node.label[parent])
+
+```
+
