@@ -5,12 +5,14 @@ date: "2023-03-28"
 output:
   html_document:
     df_print: paged
+    highlight: breezedark
   pdf_document: 
     highlight: tango
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{fvextra}
   - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}} 
+  - \DeclareMathOperator*{\argmin}{arg\,min}
 ---
 
 ```{r setup, include=FALSE}
@@ -53,7 +55,6 @@ ggplot(solarAU,
        aes(x = toy, y = tod, z = logProduction)) +
        stat_summary_2d() 
 ```
-
 We can see there is greater solar production in the middle of the day and in the winter, which is to be expected. 
 
 # Linear Model
@@ -76,6 +77,8 @@ y <- solarAU$logProduction
 ```
 
 
+### QR decomposition
+We first try to perform the computation using a QR decomposition
 ```{r, engine='Rcpp'}
 // [[Rcpp::depends(RcppArmadillo)]]
 
@@ -83,7 +86,7 @@ y <- solarAU$logProduction
 using namespace arma;
 
 // [[Rcpp::export]]
-vec Rcpp_lm(mat& X, vec& y){
+vec arma_QR_lm(mat& X, vec& y){
   mat Q;
   mat R;
   
@@ -95,24 +98,200 @@ vec Rcpp_lm(mat& X, vec& y){
 }
 ```
 
-```{r}
-Rcpp_beta <- Rcpp_lm(X, y)
-```
+
 
 We now check that the two vectors are the same:
 ```{r}
-max(abs(R_beta - Rcpp_beta))
+arma_QR_beta <- arma_QR_lm(X,y)
+max(abs(R_beta - arma_QR_beta))
 ```
 
 We can now use the microbenchmark function to compare the running times
-```{r}
+```{r, cache=TRUE}
 library(microbenchmark)
 microbenchmark(R = beta <- lm(logProduction ~ tod + I(tod^2) + toy + I(toy^2), data = solarAU),
-               arma = Rcpp_beta <- Rcpp_lm(X,y), times = 10)
+               "arma QR"= arma_QR_beta <- arma_QR_lm(X,y), times = 10)
 ```
 
 We can see here however that the `arma` function performed much worse than the base `R` one. This might be because we have used `qr` instead of `qr_econ` in our Rcpp code. We can rewrite the Rcpp function
 ```{r, engine='Rcpp'}
+// [[Rcpp::depends(RcppArmadillo)]]
 
+#include <RcppArmadillo.h>
+using namespace arma;
+
+// [[Rcpp::export]]
+vec arma_QR_lm_fast(mat& X, vec& y){
+  mat Q;
+  mat R;
+  
+  qr_econ(Q, R, X);
+  vec Qty = trans(Q) * y;
+  
+  vec beta = solve(R, Qty);
+  return beta;
+}
+```
+
+```{r, cache=TRUE}
+library(microbenchmark)
+microbenchmark(R = R_beta <- lm(logProduction ~ tod + I(tod^2) + toy + I(toy^2), data = solarAU)$coefficients,
+               "arma QR"= arma_QR_beta <- arma_QR_lm(X,y), 
+               "arma QR fast" = arma_QR_beta_fast <- arma_QR_lm_fast(X,y),
+               times = 10)
+```
+We can now see, the RcppArmadillo version outperforms the R version, however we want to see if this comes at a cost of precision:
+```{r}
+arma_QR_beta_fast <- arma_QR_lm_fast(X,y)
+max(abs(arma_QR_beta_fast - R_beta))
+```
+
+### Cholesky Decomposition
+
+**REVISIT??**
+
+```{r, engine='Rcpp', eval = FALSE}
+// [[Rcpp::depends(RcppArmadillo)]]
+
+#include <RcppArmadillo.h>
+using namespace arma;
+
+// [[Rcpp::export]]
+vec arma_cholesky_lm(mat& X, vec& y){
+  
+}
+```
+
+## Model Checking
+We can now plot fitted values and the residuals to check if the model seems valid:
+
+```{r}
+library(gridExtra)
+
+solarAU <- solarAU %>%
+  mutate(fitted = fit$fitted.values, 
+         residuals = fit$residuals) 
+
+fitted_plot <- ggplot(data = solarAU,
+                      aes(x = toy, y = tod, z = fitted)) +
+  stat_summary_2d()+
+  theme(aspect.ratio = 1)
+
+res_plot <- ggplot(data = solarAU,
+                      aes(x = toy, y = tod, z = residuals)) +
+  stat_summary_2d()+
+  theme(aspect.ratio = 1)
+
+grid.arrange(fitted_plot, res_plot, ncol = 2)
+```
+We can see from these plots there is a non linear pattern, particularly in the residuals, so we adapt the model.
+
+# Kernel Local Least Regression
+
+In this model we take the coefficients to be dependent on the covariates $\hat \beta = \hat \beta(x)$. For a fixed $x_0$, we take
+$$
+\hat \beta (x_0) = \argmin_{\beta} \sum_{i =1}^n \kappa_H (x_0 - x_i) (y_i - \tilde x_i^T \beta)^2
+$$
+
+for a kernel $\kappa_H$ with bandwidth H. We create this function in R:
+
+```{r}
+library(mvtnorm)
+
+lm_local <- function(y, x0, X0, x, X, H){
+  w <- dmvnorm(x, x0, H)
+  fit <- lm(y ~ -1 + X, weights = w)
+  return( t(X0) %*% coef(fit) )
+}
+```
+
+To reduce the computational cost, we will only fit the model on 2000 data points:
+
+```{r}
+sample_ind <- sample(1:nrow(solarAU), 2000)
+
+x <- solarAU %>%
+  select(tod, toy) %>%
+  as.matrix()
+x_sample <- x[sample_ind,] 
+X_sample <- X[sample_ind,]
+
+y_sample <- solarAU$logProduction
+
+solar_sample <- solarAU[sample_ind,]
+
+X_sample <- X[sample_ind,]
+```
+
+We can now fit $\hat \beta (x_0)$ for each sample data point:
+```{r}
+pred_local <- sapply(1:2000, function(ii){
+  lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
+})
+```
+
+```{r}
+solar_sample <- solar_sample %>%
+  mutate("local fitted" = pred_local,
+         residuals = logProduction - `local fitted`)
+
+local_fitted_plot <- ggplot(solar_sample,
+       aes(x = toy, y = tod, z = `local fitted`)) +
+       stat_summary_2d() +
+       theme(aspect.ratio = 1)
+
+local_res_plot <- ggplot(solar_sample,
+       aes(x = toy, y = tod, z = residuals)) +
+       stat_summary_2d() +
+       theme(aspect.ratio = 1)
+
+grid.arrange(local_fitted_plot, local_res_plot, ncol = 2)
+```
+
+## Using RcppArmadillo
+
+We now want to implement the above with RcppArmadillo in the hopes of speeding this up 
+
+```{r, engine='Rcpp'}
+// [[Rcpp::depends(RcppArmadillo, RcppDist)]]
+
+#include <RcppArmadillo.h>
+#include <mvnorm.h>
+using namespace arma;
+
+vec arma_weight_lm(mat& X, vec& y, vec& w){
+  mat W = diagmat(sqrt(w));
+  
+  mat new_X = W * X;
+  vec new_y = W * y;
+  
+  mat Q;
+  mat R;
+  
+  qr_econ(Q, R, new_X);
+  vec Qty = trans(Q) * new_y;
+  
+  vec beta = solve(R, Qty);
+  return beta;
+}
+
+// [[Rcpp::export]]
+vec arma_lm_local(vec& y, vec& x0,  vec& X0, mat& x, mat& X, mat& H){
+
+  vec w = dmvnorm(x, x0, H);
+  
+  vec beta = arma_weight_lm(X,  y, w);
+  
+  return trans(X0) * beta;
+  
+  return y;
+}
+
+```
+
+```{r}
+arma_pred_local <- sapply(1:2000, function(ii){
+  arma_lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
+})
 ```
 
