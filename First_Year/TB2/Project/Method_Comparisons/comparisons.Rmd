@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 set.seed(1234)
 ```
 
-This document's goals are two-fold:
+This document's goals are three-fold:
 
 - Looking at how well different methods perform in identifying changes in the structure of data.
 - Finding the way UASE embeddings change with scaling and mixing changes to the underlying generating tree structure.
@@ -34,6 +34,8 @@ plot(original$tree)
 
 We can now manipulate the data in a series of ways.
 
+
+
 ## Tree Scaling
 
 ```{r}
@@ -51,22 +53,70 @@ library(ape)
 library(glottoTrees)
 
 plot(mixed$tree)
-edges(mixture[2], mixture[1],arrows = 1)
-tree <- makeNodeLabel(tree)
-tree <- move_tip(tree, "t10", tree$node.label)
+edges(mixture[2], mixture[1], arrows = 1)
 
 ```
 
-## Moving a node
+## Swapping node
 
-```{r, eval= FALSE}
-tree <- as.phylo(original$tree)
-tree <- makeNodeLabel(tree)
+```{r}
+tree <- original$tree
 
-tip <- sample(1:10, 2)
+newtree <- tree
+newtree$tip.label <-c("t2", "t1", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10")
 
-parent <- sample(tip:9, N:Node)
-tree <- move_node(tree, tree$node.label[tip], tree$node.label[parent])
-
+swapped <- simulateCoalescent(n,k,
+                         sigma0=0.0001,
+                         Amodel="uniform",
+                         alpha=0,
+                         minedge=0.1,
+                         tree = newtree) 
 ```
+
+# UASE
+
+We first include our R functions for UASE embedding
+```{r}
+
+UASE <- function(Y, A, K, d = 2){
+  svd <- svd(Y)
+  population <- A %*% colnames(A)
+  
+  
+  U <- svd$u %*% diag(sqrt(svd$d))
+  
+  t <- rep(1:K, each = nrow(A))
+  index <- rep(1:nrow(A),K)
+  V <- svd$v %*% diag(sqrt(svd$d))
+  V <- V[,1:d]
+  right <- as.data.frame(cbind(V,as.factor(t), 
+                               as.factor(population), 
+                               as.factor(index)))
+  
+  
+}
+
+UASE_right <- function(A,d = 2, K){
+  svd <- svd(A)
+  Y <- svd$v %*% diag(sqrt(svd$d))
+  Y <- Y[,1:d]
+  t <- rep(1:K, each = nrow(A))
+  data <- rep(1:nrow(A),K)
+  
+  Y <- as.data.frame(cbind(Y,as.factor(t), as.factor(data)))
+  colnames(Y) <- c(1:d,"discipline", "data_point")
+  return(Y)
+}
+
+UASE_left <- function(A,d = 2, K){
+  svd <- svd(A)
+  Y <- svd$u %*% diag(sqrt(svd$d))
+  Y <- Y[,1:d]
+  Y <- as.data.frame(Y)
+  colnames(Y) <- c(1:d)
+  return(Y)
+}
+```
+
+
 
