@@ -6,8 +6,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-set.seed(1234)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+set.seed(124)
+library(ggplot2)
+theme_set(theme_bw())
 ```
 
 This document's goals are three-fold:
@@ -45,7 +47,7 @@ plot(scaled$tree)
 
 ## Mixture
 
-```{r, eval=FALSE}
+```{r}
 mixed <- mixCoalescent(original, fraction = 1)
 mixture <- mixed$edges
 
@@ -57,7 +59,7 @@ edges(mixture[2], mixture[1], arrows = 1)
 
 ```
 
-## Swapping node
+## Swapping node - REVISIT
 
 ```{r}
 tree <- original$tree
@@ -71,52 +73,25 @@ swapped <- simulateCoalescent(n,k,
                          alpha=0,
                          minedge=0.1,
                          tree = newtree) 
+plot(swapped$tree)
 ```
+
 
 # UASE
 
 We first include our R functions for UASE embedding
 ```{r}
+library(ggplot2)
+source("UASE.R")
+library(adephylo)
+scaled_UASE <- UASE(original, scaled)
 
-UASE <- function(Y, A, K, d = 2){
-  svd <- svd(Y)
-  population <- A %*% colnames(A)
-  
-  
-  U <- svd$u %*% diag(sqrt(svd$d))
-  
-  t <- rep(1:K, each = nrow(A))
-  index <- rep(1:nrow(A),K)
-  V <- svd$v %*% diag(sqrt(svd$d))
-  V <- V[,1:d]
-  right <- as.data.frame(cbind(V,as.factor(t), 
-                               as.factor(population), 
-                               as.factor(index)))
-  
-  
-}
+plot_UASE(scaled_UASE)
 
-UASE_right <- function(A,d = 2, K){
-  svd <- svd(A)
-  Y <- svd$v %*% diag(sqrt(svd$d))
-  Y <- Y[,1:d]
-  t <- rep(1:K, each = nrow(A))
-  data <- rep(1:nrow(A),K)
-  
-  Y <- as.data.frame(cbind(Y,as.factor(t), as.factor(data)))
-  colnames(Y) <- c(1:d,"discipline", "data_point")
-  return(Y)
-}
-
-UASE_left <- function(A,d = 2, K){
-  svd <- svd(A)
-  Y <- svd$u %*% diag(sqrt(svd$d))
-  Y <- Y[,1:d]
-  Y <- as.data.frame(Y)
-  colnames(Y) <- c(1:d)
-  return(Y)
-}
+distRoot(original$tree)
 ```
+
+
 
 
 

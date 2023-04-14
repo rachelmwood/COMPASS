@@ -224,8 +224,8 @@ X_sample <- X[sample_ind,]
 ```
 
 We can now fit $\hat \beta (x_0)$ for each sample data point:
-```{r}
-pred_local <- sapply(1:2000, function(ii){
+```{r, cache=TRUE}
+pred_local <- sapply(1:1000, function(ii){
   lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
 })
 ```
@@ -259,39 +259,74 @@ We now want to implement the above with RcppArmadillo in the hopes of speeding t
 #include <mvnorm.h>
 using namespace arma;
 
-vec arma_weight_lm(mat& X, vec& y, vec& w){
+vec dmvnInt(mat & X, vec & mu, mat & L)
+{
+  
+  unsigned int d = X.n_cols;
+  unsigned int m = X.n_rows;
+  
+  vec D = L.diag();
+  vec out(m);
+  vec z(d);
+  
+  double acc;
+  unsigned int icol, irow, ii;
+  for(icol = 0; icol < m; icol++)
+  {
+    for(irow = 0; irow < d; irow++)
+    {
+     acc = 0.0;
+     for(ii = 0; ii < irow; ii++) acc += z.at(ii) * L.at(irow, ii);
+     z.at(irow) = ( X.at(icol, irow) - mu.at(irow) - acc ) / D.at(irow);
+    }
+    out.at(icol) = sum(square(z));
+  }
+
+  out = exp( - 0.5 * out - ( (d / 2.0) * log(2.0 * M_PI) + sum(log(D)) ) );
+
+  return out;
+}
+// [[Rcpp::export]]
+vec arma_lm_local(vec& y, vec& x0,  vec& X0, mat& x, mat& X, mat& H){
+  
+  mat L = chol(H, "lower");
+  
+  vec w = dmvnInt(x, x0, L);
+  
   mat W = diagmat(sqrt(w));
   
   mat new_X = W * X;
   vec new_y = W * y;
   
-  mat Q;
-  mat R;
+  mat Q, R;
   
   qr_econ(Q, R, new_X);
   vec Qty = trans(Q) * new_y;
   
   vec beta = solve(R, Qty);
-  return beta;
-}
-
-// [[Rcpp::export]]
-vec arma_lm_local(vec& y, vec& x0,  vec& X0, mat& x, mat& X, mat& H){
-
-  vec w = dmvnorm(x, x0, H);
-  
-  vec beta = arma_weight_lm(X,  y, w);
   
   return trans(X0) * beta;
   
-  return y;
 }
 
 ```
 
-```{r}
-arma_pred_local <- sapply(1:2000, function(ii){
+We can now run this for our sample as before and check our results are consistent:
+
+```{r, cache=TRUE}
+arma_pred_local <- sapply(1:1000, function(ii){
   arma_lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
 })
+max(abs(arma_pred_local - pred_local))
 ```
 
+We can now compare the running times of our functions:
+```{r, cache = TRUE}
+microbenchmark(R = pred_local <- sapply(1:1000, function(ii){
+                     lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
+                    }),
+               "arma"= arma_pred_local <- sapply(1:1000, function(ii){
+                        arma_lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
+                      }),
+               times = 1)
+```
