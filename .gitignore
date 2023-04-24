@@ -4,4 +4,4 @@
 **/*.~lock.*
 .Rproj.user
 **/tfvenv
-
+**/Pet_Breeds/*

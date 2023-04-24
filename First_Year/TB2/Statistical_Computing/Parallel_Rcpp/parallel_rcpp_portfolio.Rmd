@@ -1,0 +1,73 @@
+---
+title: "Parallel Rcpp Portfolio"
+author: "Rachel Wood"
+date: "2023-04-20"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this portfolio we consider the `electBook` dataset on Irish smart meters:
+```{r}
+library(electBook)
+library(kableExtra)
+data("Irish")
+summary(Irish) %>%
+  kable()
+```
+
+We concatenate the household demand into a vector - as there are a huge number of observations, we only plot a sub sample of the data:
+```{r}
+y <- do.call("c", Irish$indCons)
+y <- y - mean(y)
+```
+
+```{r}
+ncust <- ncol(Irish$indCons) 
+
+x <- rep(Irish$extra$tod, ncust)
+
+n <- length(x)
+ss <- sample(1:n, 1e4)
+plot(x[ss], y[ss], col = "grey")
+```
+## Modelling Demand
+We consider modelling the demand as a function of the time of day. Our first model is a simple linear regression $ \mathbb{E} (y|x) = \beta x$, which we fit using least squares:
+
+
+```{r}
+reg1D <- function(y, x){
+  
+  b <- t(x) %*% y / (t(x) %*% x)  
+  
+  return(b)
+  
+}
+```
+
+We compare this to the built in `lm` function:
+```{r}
+system.time( lm(y ~ -1 + x)$coeff )[3]
+
+system.time( reg1D(y, x) )[3]
+```
+
+We can see our function has a much faster implementation, however we can still attempt to improve this by parallelising the code in Rcpp 
+```{r, engine='Rcpp'}
+#include <Rcpp.h>
+#include <RcppParallel.h>
+using namespace Rcpp;
+
+// [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::plugins(openmp)]]
+
+// [[Rcpp::export]]
+int reg1D_RcppParallel(NumericVector y, NumericVector x){
+  
+}
+```
+

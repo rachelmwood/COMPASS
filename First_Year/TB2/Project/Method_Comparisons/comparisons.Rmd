@@ -27,7 +27,7 @@ library(ClaritySim)
 n=100 
 k=10
 original <- simulateCoalescent(n,k,
-                         sigma0=0.0001,
+                         sigma0=0.1,
                          Amodel="uniform",
                          alpha=0,
                          minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
@@ -36,18 +36,39 @@ plot(original$tree)
 
 We can now manipulate the data in a series of ways.
 
+## Adding an Anomaly:
+
+```{r}
+A <- original$A
+A[95:100,] <- A[85:90,]
+
+anomaly <- original
+anomaly$A <- A
+anomaly <- simData(anomaly)
+source("UASE.R")
+
+anomaly_UASE <-UASE(original, anomaly)
+plot_UASE(anomaly_UASE)
+```
 
 
 ## Tree Scaling
-
+We now look at how tree scaling affects the detection of anomalies, we will set the minimum and maximum scaling coefficient to $\frac{1}{r}$ and $r$ respectively for different values of $r$:
 ```{r}
-scaled <- transformCoalescent(original)
-plot(scaled$tree)
+r <- as.vector(1:10)
+scaled <- vector(mode = "list", length(r))
+names(scaled) <- r
+
+for (i in 1:length(r)){
+  scaled[[i]] <- transformCoalescent(anomaly, multmin = 1/r[i], multmax = r)
+}
+
+scaled_UASE <- lapply(scaled, function(sim){UASE(original, sim)})
 ```
 
 ## Mixture
 
-```{r}
+```{r, eval = FALSE}
 mixed <- mixCoalescent(original, fraction = 1)
 mixture <- mixed$edges
 
@@ -61,7 +82,7 @@ edges(mixture[2], mixture[1], arrows = 1)
 
 ## Swapping node - REVISIT
 
-```{r}
+```{r, eval = FALSE}
 tree <- original$tree
 
 newtree <- tree
@@ -80,15 +101,17 @@ plot(swapped$tree)
 # UASE
 
 We first include our R functions for UASE embedding
-```{r}
+```{r, eval = FALSE}
 library(ggplot2)
 source("UASE.R")
-library(adephylo)
 scaled_UASE <- UASE(original, scaled)
 
 plot_UASE(scaled_UASE)
 
-distRoot(original$tree)
+#original_root_dist <- distRoot(original$tree)
+#scaled_root_dist <- distRoot(scaled$tree)
+
+
 ```
 
 

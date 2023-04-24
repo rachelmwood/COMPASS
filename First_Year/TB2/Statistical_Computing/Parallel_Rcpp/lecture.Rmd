@@ -1,0 +1,340 @@
+---
+title: "Parallel Rcpp"
+author: "Rachel Wood"
+date: "2023-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/home/ac18826/Documents/COMPASS/First_Year/TB2/Statistical_Computing/Parallel_Rcpp/")
+```
+
+
+```{r, engine='Rcpp'}
+#include <unistd.h>
+#include <Rcpp.h>
+
+// [[Rcpp::export(wait_a_second)]]
+bool wait_a_second(int sec)
+{
+ for(int ii = 0; ii < sec; ii++)
+ { 
+  sleep(1);
+ }
+ return 1;
+}
+
+```
+
+```{r}
+system.time( wait_a_second(2) )[3]
+```
+
+## Sleeping in Parallel
+```{r, engine='Rcpp', verbose=TRUE}
+
+#include <unistd.h>
+#include <Rcpp.h>
+
+// [[Rcpp::plugins(openmp)]]
+
+// [[Rcpp::export(wait_a_second_omp)]]
+bool wait_a_second_omp(int sec, int ncores)
+{
+
+ #if defined(_OPENMP)
+  #pragma omp parallel num_threads(ncores)
+  #pragma omp for
+ #endif
+ for(int ii = 0; ii < sec; ii++)
+ { 
+  sleep(1);
+ }
+ 
+ return 1;
+
+ }
+```
+
+
+```{r}
+system.time(wait_a_second_omp(4, 1))[3]
+```
+
+# Non-Linear Speed ups
+
+```{r, engine='Rcpp'}
+#include <Rcpp.h>
+#include <omp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export(allFiniteSeq)]]
+bool allFiniteCpp(NumericVector x)
+{
+
+ size_t n = x.size();
+ double out = 0;
+ 
+ for(size_t ii = 0; ii < n; ii++)
+ {
+  out += x[ii];
+ }
+ 
+ return R_FINITE(out);
+
+}
+
+// [[Rcpp::plugins(openmp)]]
+
+// [[Rcpp::export(allFiniteOMP)]]
+bool allFiniteOMP(NumericVector x, int ncores)
+{
+ size_t n = x.size();
+ double out = 0;
+ NumericVector z(ncores);
+ 
+ #pragma omp parallel num_threads(ncores)
+ {
+  int kk = omp_get_thread_num();
+  
+  #pragma omp for schedule(static)
+  for(size_t ii = 0; ii < n; ii++)
+  {
+   z[kk] += x[ii];
+  }
+ }
+ 
+ out = sum(z);
+ 
+ return R_FINITE(out);
+
+ }
+```
+
+```{r}
+x <- rnorm(1e7)
+
+library(microbenchmark)
+options(microbenchmark.unit="relative")
+microbenchmark(all(is.finite(x)), #Basic R
+               allFiniteSeq(x), #Rcpp sequential
+               allFiniteOMP(x, 1), #Rcpp and OpenMP ...
+               allFiniteOMP(x, 4),
+               allFiniteOMP(x, 8), 
+               allFiniteOMP(x, 16))
+```
+Note: R API or Rcpp not thread-safe (opening a parallel section)
+
+# Random Number Generation
+
+The code below will produce invalid results and might crash your R session:
+```{r, engine='Rcpp', eval = FALSE}
+#pragma omp parallel
+{
+x = R::rbeta(a, b);
+}
+```
+
+We adopt a thread-safe RNG
+```{r, engine='Rcpp'}
+#include <Rcpp.h>
+#include <sitmo.h>
+
+// [[Rcpp::depends(sitmo)]]
+
+// [[Rcpp::export(sumunif_sitmo)]]
+Rcpp::NumericVector sumunif_sitmo(unsigned int n,
+                                  unsigned int nstep,
+                                  double seed) {
+  Rcpp::NumericVector out(n);
+
+  uint32_t coreseed = static_cast<uint32_t>(seed);
+  sitmo::prng eng(coreseed);
+  
+  double mx = sitmo::prng::max();
+  double tmp = 0;
+
+   for(unsigned int ii = 0; ii < n; ++ii) {
+     tmp = 0.0;
+     for(unsigned int kk = 0; kk < nstep; ++kk){
+      tmp += eng() / mx;
+     }
+     out[ii] = tmp;
+   }
+    
+  return out;
+}
+```
+Equivalent to 
+
+```{r, eval=FALSE}
+rowSums(matrix(runif(n*nstep), n, nstep))
+```
+
+
+```{r}
+n <- 1e3
+nstep <- 1000
+
+par(mfrow = c(1, 2))
+hist(rowSums(matrix(runif(n*nstep), n, nstep)), main = "R", xlab = "x")
+hist(sumunif_sitmo(n, nstep = nstep, seed = 1), main = "Sitmo", xlab = "x")
+```
+
+## Parallel Version
+
+```{r, engine = 'Rcpp'}
+#include <Rcpp.h>
+#include <sitmo.h>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+// [[Rcpp::depends(sitmo)]]
+// [[Rcpp::plugins(openmp)]]
+
+// [[Rcpp::export(sumunif_sitmo_omp)]]
+Rcpp::NumericVector sumunif_sitmo_omp(unsigned int n,
+                                      unsigned int nstep,
+                                      Rcpp::NumericVector seeds) {
+  Rcpp::NumericVector out(n);
+  
+  unsigned int ncores = seeds.size();
+  
+  #ifdef _OPENMP
+  #pragma omp parallel num_threads(ncores)
+  {
+  #endif
+  
+   uint32_t coreseed = static_cast<uint32_t>(seeds[0]);
+   
+   #ifdef _OPENMP
+    coreseed = static_cast<uint32_t>(seeds[omp_get_thread_num()]);
+   #endif
+   
+   sitmo::prng eng(coreseed);
+   
+   double mx = sitmo::prng::max();
+   double tmp = 0;
+  
+   #ifdef _OPENMP
+    #pragma omp for 
+   #endif
+   for(unsigned int ii = 0; ii < n; ++ii) {
+     tmp = 0.0;
+     for(unsigned int kk = 0; kk < nstep; ++kk){
+      tmp += eng() / mx;
+     }
+     out[ii] = tmp;
+   }
+    
+  #ifdef _OPENMP
+  }
+  #endif
+  
+  return out;
+}
+```
+Compare results:
+```{r}
+microbenchmark(R = rowSums(matrix(runif(n*nstep), n, nstep)),
+               sitmo = sumunif_sitmo(n, nstep = nstep, seed = 1),
+               sitmo_omp1 = sumunif_sitmo_omp(n, nstep = nstep, seeds = 1),
+               sitmo_omp4 = sumunif_sitmo_omp(n, nstep = nstep, seeds = 1:4), 
+               sitmo_omp16 = sumunif_sitmo_omp(n, nstep = nstep, seeds = 1:16), 
+               times = 100
+               )
+```
+# Thread Safe Accessors
+
+Consider the error function
+```{r}
+x <- rnorm(1e5)
+2 * pnorm(x * sqrt(2)) - 1
+```
+
+The same in Rcpp is 
+```{r, engine='Rcpp'}
+#include <boost/math/special_functions/erf.hpp>
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::depends(BH)]]
+
+// [[Rcpp::export(erf)]]
+NumericVector erf(NumericVector x)
+{
+
+ size_t n = x.size();
+ NumericVector out(n);
+ 
+ for(size_t ii = 0; ii < n; ii++)
+ {
+  out[ii] = boost::math::erf(x[ii]);
+ }
+ 
+ return out;
+
+ }
+```
+
+check it works:
+
+```{r}
+x <- rnorm(1e6)
+max(abs( (2 * pnorm(x * sqrt(2)) - 1) - erf(x)))
+
+```
+
+```{r}
+options(microbenchmark.unit="relative")
+microbenchmark(R = 2 * pnorm(x * sqrt(2)) - 1, 
+               erf(x), 
+               times = 100)
+```
+
+
+Parallelising the computation:
+```{r, engine='Rcpp'}
+#include <boost/math/special_functions/erf.hpp>
+#include <Rcpp.h>
+#include <RcppParallel.h>
+using namespace Rcpp;
+
+// [[Rcpp::depends(BH)]]
+// [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::plugins(openmp)]]
+
+// [[Rcpp::export(erfOmp)]]
+NumericVector erfOmp(NumericVector x, int ncores)
+{
+
+ size_t n = x.size();
+ NumericVector out(n);
+ RcppParallel::RVector<double> wo(out);
+ RcppParallel::RVector<double> wx(x);
+ 
+ #if defined(_OPENMP)
+  #pragma omp parallel for num_threads(ncores)
+ #endif
+ for(size_t ii = 0; ii < n; ii++)
+ {
+  wo[ii] = boost::math::erf(wx[ii]);
+ }
+ 
+ return out;
+
+ }
+```
+
+```{r}
+microbenchmark(R = 2 * pnorm(x * sqrt(2)) - 1, 
+               erfOmp(x, 1), 
+               erfOmp(x, 4),
+               erfOmp(x, 8),
+               times = 100)
+
+```
+

@@ -7,10 +7,6 @@ UASE <- function(sim1, sim2,d = 2){
   
   svd <- svd(Y)
   
-  if (!all.equal(sim1$A, sim2$A)){
-    stop("Community matrices must be the same")
-  }
-  
   A <- sim1$A
   population <- A %*% 1:ncol(A)
   
@@ -72,4 +68,13 @@ plot_UASE <- function(UASE){
   lay <- rbind(c(1,2),
                c(3,3))
   grid.arrange(V1_plot, V2_plot, U_plot, layout_matrix = lay)
+}
+
+distance_moved <- function(UASE){
+  V <- UASE$right %>%
+    as_tibble()
+  n <- nrow(V) 
+  
+  
+  joined <- cbind()
 }
