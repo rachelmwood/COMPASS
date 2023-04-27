@@ -11,9 +11,9 @@
 
 <meta name="author" content="Rachel Wood" />
 
-<meta name="date" content="2023-03-22" />
+<meta name="date" content="2023-04-25" />
 
-<title>Linux Command Line</title>
+<title>HPC Portfolio</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -256,42 +256,46 @@ border: none; display: inline-block;
 -khtml-user-select: none; -moz-user-select: none;
 -ms-user-select: none; user-select: none;
 padding: 0 4px; width: 4em;
-background-color: #2a211c;
-color: #bdae9d;
+background-color: #232629;
+color: #7a7c7d;
 }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #bdae9d; padding-left: 4px; }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #7a7c7d; padding-left: 4px; }
 div.sourceCode
-{ color: #bdae9d; background-color: #2a211c; }
+{ color: #cfcfc2; background-color: #232629; }
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-code span.al { color: #ffff00; } 
-code span.an { color: #0066ff; font-weight: bold; font-style: italic; } 
-code span.at { } 
-code span.bn { color: #44aa43; } 
-code span.bu { } 
-code span.cf { color: #43a8ed; font-weight: bold; } 
-code span.ch { color: #049b0a; } 
-code span.cn { } 
-code span.co { color: #0066ff; font-weight: bold; font-style: italic; } 
-code span.do { color: #0066ff; font-style: italic; } 
-code span.dt { text-decoration: underline; } 
-code span.dv { color: #44aa43; } 
-code span.er { color: #ffff00; font-weight: bold; } 
-code span.ex { } 
-code span.fl { color: #44aa43; } 
-code span.fu { color: #ff9358; font-weight: bold; } 
-code span.im { } 
-code span.in { color: #0066ff; font-weight: bold; font-style: italic; } 
-code span.kw { color: #43a8ed; font-weight: bold; } 
-code span.op { } 
-code span.pp { font-weight: bold; } 
-code span.sc { color: #049b0a; } 
-code span.ss { color: #049b0a; } 
-code span.st { color: #049b0a; } 
-code span.va { } 
-code span.vs { color: #049b0a; } 
-code span.wa { color: #ffff00; font-weight: bold; } 
+code span { color: #cfcfc2; } 
+code span.al { color: #95da4c; background-color: #4d1f24; font-weight: bold; } 
+code span.an { color: #3f8058; } 
+code span.at { color: #2980b9; } 
+code span.bn { color: #f67400; } 
+code span.bu { color: #7f8c8d; } 
+code span.cf { color: #fdbc4b; font-weight: bold; } 
+code span.ch { color: #3daee9; } 
+code span.cn { color: #27aeae; font-weight: bold; } 
+code span.co { color: #7a7c7d; } 
+code span.cv { color: #7f8c8d; } 
+code span.do { color: #a43340; } 
+code span.dt { color: #2980b9; } 
+code span.dv { color: #f67400; } 
+code span.er { color: #da4453; text-decoration: underline; } 
+code span.ex { color: #0099ff; font-weight: bold; } 
+code span.fl { color: #f67400; } 
+code span.fu { color: #8e44ad; } 
+code span.im { color: #27ae60; } 
+code span.in { color: #c45b00; } 
+code span.kw { color: #cfcfc2; font-weight: bold; } 
+code span.op { color: #cfcfc2; } 
+code span.ot { color: #27ae60; } 
+code span.pp { color: #27ae60; } 
+code span.re { color: #2980b9; background-color: #153042; } 
+code span.sc { color: #3daee9; } 
+code span.ss { color: #da4453; } 
+code span.st { color: #f44f4f; } 
+code span.va { color: #27aeae; } 
+code span.vs { color: #da4453; } 
+code span.wa { color: #da4453; } 
 </style>
 <script>
 // apply pandoc div.sourceCode style to pre.sourceCode instead
@@ -421,112 +425,155 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Linux Command Line</h1>
+<h1 class="title toc-ignore">HPC Portfolio</h1>
 <h4 class="author">Rachel Wood</h4>
-<h4 class="date">2023-03-22</h4>
+<h4 class="date">2023-04-25</h4>
 
 </div>
 
 
-<p>For this portfolio I will use the example of bioinformatics to
-showcase the utility of the Linux command line. The data we will be
-using is the genome and protein datasets from the SARS-CoV-2 virus,
-which can be found at .</p>
-<div id="working-with-files-and-file-systems" class="section level1">
-<h1>Working with Files and File Systems</h1>
-<p>We start in a folder containing the files downloaded from the link
-above:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">GCF_009858895.2_ASM985889v3_genomic.fna.gz</span>  </span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">GCF_009858895.2_ASM985889v3_protein.faa.gz</span></span></code></pre></div>
-<p>We first create a folder to work within using the <code>mkdir</code>
-command and use the <code>cd</code> command to move into this new file.
-Finally we can use the <code>ls</code> command to view the contents of
-this folder:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> bioinf_ex</span></code></pre></div>
-<p>As expected, the directory is empty, but we can move the genome and
-protein files to our new folders. We use the to go one `step back’ in
-the directory and return to our original directory. We use the command
-again and then the command to move our two files into the new folder we
-have created:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> GCF_009858895.2_ASM985889v3_protein.faa.gz <span class="at">-t</span> bioinf_ex/</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> GCF_009858895.2_ASM985889v3_genomic.fna.gz <span class="at">-t</span> bioinf_ex/</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> bioinf_ex/</span></code></pre></div>
-<p>We now check these files have been successfully moved:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">GCF_009858895.2_ASM985889v3_genomic.fna.gz</span>  </span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">GCF_009858895.2_ASM985889v3_protein.faa.gz</span></span></code></pre></div>
-<p>We notice the <code>.gz</code> file extension, meaning we need to
-unzip the files. We can do this with the <code>gzip</code> command:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gzip</span> <span class="at">-d</span> GCF_009858895.2_ASM985889v3_genomic.fna.gz</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">gzip</span> <span class="at">-d</span> GCF_009858895.2_ASM985889v3_protein.faa.gz</span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">GCF_009858895.2_ASM985889v3_genomic.fna</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">GCF_009858895.2_ASM985889v3_protein.fa</span></span></code></pre></div>
-<p>We finally rename the files to something more convenient with the
-<code>mv</code> command:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> GCF_009858895.2_ASM985889v3_genomic.fna genomic.fna</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> GCF_009858895.2_ASM985889v3_protein.faa protein.faa</span></code></pre></div>
+This portfolio on high performance computing will look at BluePebble.
+The general structure of these systems can be thought of in the
+following way:
+The process for running a job on the HPC can be broadly described as:
+<p>We can now go through these steps one by one.</p>
+<div id="logging-on" class="section level1">
+<h1>Logging On</h1>
+<p>This step is relatively simple - with a Linux machine we can just use
+the <code>shh</code> command in the command line with
+<code>&lt;username&gt;@&lt;hostname&gt;</code> then enter the
+password:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-X</span> ac18826@bp1-login.acrc.bris.ac.uk</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">The</span> authenticity of host <span class="st">&#39;bp1-login.acrc.bris.ac.uk (172.25.9.103)&#39;</span> cant be established.</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ECDSA</span> key fingerprint is SHA256:IhtH3HdjJiZN9urxgdSBewWGocOTEXxW/ZTq9jpJ2FI.</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">Are</span> you sure you want to continue connecting <span class="er">(</span><span class="ex">yes/no/[fingerprint]</span><span class="kw">)</span><span class="ex">?</span> yes</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a> </span></code></pre></div>
 </div>
-<div id="genomic-data" class="section level1">
-<h1>Genomic Data</h1>
-<p>This section focuses on the genomic.fna file. We first use the
-<code>head</code> command to view the first few lines of the file:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span> genomic.fna</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">NC_045512.2</span> Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">ATTAAAGGTTTATACCTTCCCAGGTAACAAACCAACCAACTTTCGATCTCTTGTAGATCTGTTCTCTAAACGAACTTTAA</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">AATCTGTGTGGCTGTCACTCGGCTGCATGCTTAGTGCACTCACGCAGTATAATTAATAACTAATTACTGTCGTTGACAGG</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">ACACGAGTAACTCGTCTATCTTCTGCAGGCTGCTTACGGTTTCGTCCGTGTTGCAGCCGATCATCAGCACATCTAGGTTT</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="ex">CGTCCGGGTGTGACCGAAAGGTAAGATGGAGAGCCTTGTCCCTGGTTTCAACGAGAAAACACACGTCCAACTCAGTTTGC</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="ex">CTGTTTTACAGGTTCGCGACGTGCTCGTACGTGGCTTTGGAGACTCCGTGGAGGAGGTCTTATCAGAGGCACGTCAACAT</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">CTTAAAGATGGCACTTGTGGCTTAGTAGAAGTTGAAAAAGGCGTTTTGCCTCAACTTGAACAGCCCTATGTGTTCATCAA</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="ex">ACGTTCGGATGCTCGAACTGCACCTCATGGTCATGTTATGGTTGAGCTGGTAGCAGAACTCGAAGGCATTCAGTACGGTC</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="ex">GTAGTGGTGAGACACTTGGTGTCCTTGTCCCTCATGTGGGCGAAATACCAGTGGCTTACCGCAAGGTTCTTCTTCGTAAG</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="ex">AACGGTAATAAAGGAGCTGGTGGCCATAGTTACGGCGCCGATCTAAAGTCATTTGACTTAGGCGACGAGCTTGGCACTGA</span></span></code></pre></div>
-<p>We might want to know how long a genome is, this is often measured by
-the number of base pairs, here each pair is represented by a character -
-a base pair is either or . We use the command using the flag instead
-combined with the command to get the count of , , or characters in the
-file (excluding the header line):</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n+2</span> genomic.fna <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-o</span> [ATCG] <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">29903</span></span></code></pre></div>
-<p>The square brackets indicate that we want want the count of any of
-these letters instead of the pattern <code>ATGC</code></p>
-<p>We can use similar commands to obtain the individual counts of the
-letters:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n+2</span> genomic.fna <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-o</span> A <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">8954</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n+2</span> genomic.fna <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-o</span> T <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">9594</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n+2</span> genomic.fna <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-o</span> C <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="ex">5492</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n+2</span> genomic.fna <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-o</span> G <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">5863</span></span></code></pre></div>
-<p>From this we can see the genome is enriched.</p>
-<p>The start codon Methionine is represented by , we can see how many
-times this appears.</p>
-<p>For this we first need to remove the header line and all new lines
-characters (denoted <code>\n</code>) and save the changes in a new
-file:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span> <span class="at">-n+2</span> genomic.fna <span class="op">&gt;</span> genomic_new.fna</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="at">-n</span> <span class="va">$(</span><span class="fu">tr</span> <span class="at">-d</span> <span class="st">&quot;\n&quot;</span> <span class="op">&lt;</span> genomic_new.fna<span class="va">)</span> <span class="op">&gt;</span> genomic_new.fna </span></code></pre></div>
-<p>Note the use of <code>echo</code>, this creates a subshell, which
-allows us to read from and write to the same file.</p>
-<p>We can now search for the Methionine codon, using the
-<code>grep</code> command again,</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-o</span> ATG genomic_new.fna <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">725</span></span></code></pre></div>
-<p>The covid nucleocapsid phosphoprotein starts with the motif
-ATGTCTGATAAT and ends with AACTCAGGCCTA. We want to isolate this gene,
-so find the character position of the character before the start of the
-patterns using <code>grep -b</code> (the <code>-b</code> indicates we
-want the byte off-set)</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-aob</span> ATGTCTGATAAT genomic_new.fna </span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">28273:ATGTCTGATAAT</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-ob</span> AACTCAGGCCTA genomic_new.fna </span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="ex">29520:AACTCAGGCCTA</span></span></code></pre></div>
-<p>We can now write the gene to a new file</p>
+<div id="writing-a-job-script" class="section level1">
+<h1>Writing a job script</h1>
+<p>A simple bash script doesn’t require anything different, for example
+the file <code>job1.sh</code>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/bin/bash</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Change into working directory</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/workshop</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Execute code</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">/bin/hostname</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Pause to give us time to see the job</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sleep</span> 60</span></code></pre></div>
+<p>doesn’t look too different from a regular bash script. However we
+will often want to use other languages in our scripts, we can do this
+using modules.</p>
+<div id="loading-modules" class="section level2">
+<h2>Loading Modules</h2>
+<p>One thing that needs to be added to a script is the module the script
+makes use of. We can check what is available using
+<code>module avail</code>, however there are so many that it is hard to
+go through all the modules. We can get the count of lines in the output
+of <code>module avail</code> as 347:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">module</span> avail <span class="dv">2</span><span class="op">&gt;&amp;</span><span class="dv">1</span> <span class="kw">|</span> <span class="fu">wc</span> <span class="at">-l</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">347</span></span></code></pre></div>
+<p>To make this easier, we can search for specific software. For example
+if we want <code>R</code>, we can use
+<code>module avail lang/r</code></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">module</span> avail lang/r</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">-----------------------</span> /sw/tools/easybuild/modules/all <span class="at">------------------------</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>   <span class="ex">lang/r/3.6.0-gcc</span>    lang/r/4.0.2-gcc</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>   <span class="ex">lang/r/3.6.1</span>        lang/r/4.0.3-bioconductor-gcc</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>   <span class="ex">lang/r/3.6.2-gcc</span>    lang/r/4.1.2-bioconductor-gcc</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>   <span class="ex">lang/r/4.0.1</span>        lang/r/4.1.2-gcc              <span class="er">(</span><span class="ex">D</span><span class="kw">)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">Where:</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>   <span class="ex">D:</span>  Default Module</span></code></pre></div>
+<p>Once we have indentified the appropriate modules we can add them in
+our script. As an example, say we want to use the
+<code>lang/r/3.6.0-gcc</code> module in our script, we can include:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">module</span> add lang/r/3.6.0-gcc</span></code></pre></div>
+</div>
+<div id="sbatch-directives" class="section level2">
+<h2><code>#SBATCH</code> directives</h2>
+<p>We might want to include some information for <code>Slurm</code> to
+better allocate compute nodes. Some options we can set are:</p>
+<ul>
+<li><code>--nodes</code>: requests the number of nodes</li>
+<li><code>--ntaskts-per-node</code>: requests the number of tasks per
+node</li>
+<li><code>--cpus-per-task</code>: requests number of cores per task</li>
+<li><code>--time</code>: requests length of runtime</li>
+<li><code>--mem</code>: requests RAM allowance per node</li>
+<li><code>--error</code>: gives the name of output file to write errors
+to</li>
+<li><code>--output</code>: gives name of output file for results</li>
+</ul>
+<p>Once the length of the <code>time</code> value, the job will be
+terminated, so it’s important not to underestimate it.</p>
+</div>
+<div id="executable-files" class="section level2">
+<h2>Executable files</h2>
+<p>We will illustrate how to include a compiled program to be run in the
+job script using the simple “Hello World!” program in C. Say we have the
+following in a file called <code>hello.c</code></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>   printf<span class="op">(</span><span class="st">&quot;Hello, World! </span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>   <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>We can load the appropriate module and compile the program in our
+workspace to an executable file called <code>hello</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">module</span> load lang/intel-parallel-studio-xe/2020</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">icc</span> hello.c <span class="at">-o</span> hello</span></code></pre></div>
+<p>Then all that’s needed is to include a line to run the compiled
+program in our bash script:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>.<span class="sc">/</span>hello</span></code></pre></div>
+</div>
+<div id="including-job-information-in-output" class="section level2">
+<h2>Including job information in output</h2>
+<p>Another useful thing for us to do might be to include some of the job
+information in the output, which we can do using <code>echo</code>. For
+example we might include</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> JOB ID: <span class="st">&quot;</span><span class="va">${SLURM_JOBID}</span><span class="st">&quot;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> Working Directory: <span class="va">$(</span><span class="bu">pwd</span><span class="va">)</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> Start Time: <span class="va">$(</span><span class="fu">date</span><span class="va">)</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> End Time: <span class="va">$(</span><span class="fu">date</span><span class="va">)</span></span></code></pre></div>
+</div>
+</div>
+<div id="submitting-a-job" class="section level1">
+<h1>Submitting a job</h1>
+<p>Once we have a script, we can submit it using the <code>sbatch</code>
+command and we will be given a job id. For example:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> job.sh</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">Submitted</span> batch job 4891240</span></code></pre></div>
+</div>
+<div id="queued-jobs" class="section level1">
+<h1>Queued Jobs</h1>
+<p>We can also check the job in the queue or cancel it using the
+following commands:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">squeue</span> <span class="at">-j</span> 4891240</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">JOBID</span>     PARTITION   NAME     USER  ST       TIME  NODES  NODELIST<span class="er">(</span><span class="ex">REASON</span><span class="kw">)</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">4891240</span>         cpu job.sh   ab1234   R       0:01      1     compute49</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">scancel</span> 4891240</span></code></pre></div>
+</div>
+<div id="job-execution" class="section level1">
+<h1>Job execution</h1>
+<p>It is possible to use the <code>top</code> command to get a live
+update on the status of all jobs being executed, and so can see the
+progress of your job. We can also log onto the compute node our job is
+on using</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> compute49</span></code></pre></div>
+</div>
+<div id="results" class="section level1">
+<h1>Results</h1>
+<p>All jobs produce an output file, whose name defaults to
+<code>slurm-&lt;job_ID&gt;.out</code>, we can examine the contents of
+these using <code>cat</code>. This will be stored in the
+<code>work</code> directory of the user space.</p>
 </div>
 
 

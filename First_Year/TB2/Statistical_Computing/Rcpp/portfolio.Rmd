@@ -194,16 +194,19 @@ ggplot() +
 ```
 
 We now write the equivalent function in Rcpp:
-```{r, engine='Rcpp', warnings = FALSE}
-// [[Rcpp::depends(RcppNumerical)]]
-// [[Rcpp::depends(RcppEigen)]]
+```{r, engine='Rcpp'}
+// [[Rcpp::depends(RcppArmadillo)]]
+// [[Rcpp::depends(roptim)]]
 
-#include <Rmath.h>
-#include <RcppNumerical.h>
+#include <cmath>  
+#include <RcppArmadilloExtensions/sample.h>
+#include <RcppArmadillo.h>
+#include <roptim.h>
 using namespace Rcpp;
-using namespace Numer;
+using namespace arma;
+using namespace roptim;
 
-// [[Rcpp::export]]
+
 NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const NumericVector xnew, const double lambda) {
   int n = x.size();
   int nnew = xnew.size();
@@ -218,37 +221,56 @@ NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const
 }
 
 // [[Rcpp::export]]
-double mse_Rcpp(const double log_lambda, const NumericVector x, const NumericVector y, const NumericVector x_new, const NumericVector y_new){
-  double lambda = exp(log_lambda);
+double lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const NumericVector groups) {
   
-  NumericVector fitted = meanKRS_Rcpp_I(x, y, x_new, lambda);
+  NumericVector x_prime {x};
+  NumericVector y_prime {y};
+  NumericVector groups_prime {groups};
   
-  int value = sum(pow(fitted - y_new, 2));
-  return value;
-}
-
-
-// [[Rcpp::export]]
-double lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const double nfolds = 5){
   int n = x.size();
   
-  NumericVector groups = sample(rep_len(seq(1, nfolds), n), n, replace = false);
-  /*
+  int nfolds = unique(groups).size();
+  
   NumericVector lambdas(nfolds);
   NumericVector mse(nfolds);
   
   for (int i =1; i <= nfolds; i++){
-    NumericVector x_train = x[groups != i];
-    NumericVector y_train = y[groups != i];
     
-    NumericVector x_test = x[groups == i];
-    NumericVector y_test = y[groups == i];
+    double mse(const double log_lambda){
+        NumericVector x_train = x_prime[groups_prime != i];
+        NumericVector y_train = y_prime[groups_prime != i];
     
-   // opt = optim_lbfgs(f = function(x){mse_Rcpp(x, x_train, y_train, x_test, y_test)}, double x = 0.02, double opt_mse)
+        NumericVector x_test = x_prime[groups_prime == i];
+        NumericVector y_test = y[groups_prime == i];
+        double lambda = exp(log_lambda);
+        NumericVector fitted = meanKRS_Rcpp_I(x_train, y_train, x_test, lambda);
+        return sum(pow(fitted - y_test, 2));
+    }
+    
+    class MSE : public Functor {
+      double operator()(const double log_lambda){
+        
+        return mse(log_lambda);
+      }
+    }
+    
+    MSE fun;
+    Roptim<MSE> opt("BFGS");
+    
+    opt.minimize(fun, 0.02);
+    
+    lambdas[i] = opt.par();Rcpp::RcppArmadillo::
+    mse[i] = opt.value();
+    
   }
-  */
-  return 0;
+  
+  int min_ind = which_min(mse);
+  
+  return lambdas[i];
+  
 }
 
+
 ```
+
 

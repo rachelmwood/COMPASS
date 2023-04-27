@@ -3,9 +3,9 @@ title: "Linux Command Line"
 author: "Rachel Wood"
 date: "2023-03-22"
 output:
-  html_document:
-    highlight: espresso
   pdf_document:
+    highlight: espresso
+  html_document:
     highlight: espresso
 header-includes:
 - \usepackage{tikz}
@@ -30,7 +30,7 @@ opts_knit$set(dev = 'pdf',
               )
 ```
 
-For this portfolio I will use the example of bioinformatics to showcase the utility of the Linux command line. The data we will be using is the genome and protein datasets from the SARS-CoV-2 virus, which can be found at \url{https://www.ncbi.nlm.nih.gov/genome/?term=SARS-CoV-2}.
+For this portfolio I will use the example of bioinformatics to showcase the utility of the Linux command line. The data we will be using is the genome sequence from the SARS-CoV-2 virus, which can be found at \url{https://www.ncbi.nlm.nih.gov/genome/?term=SARS-CoV-2}.
 
 # Working with Files and File Systems
 
@@ -38,17 +38,15 @@ For this portfolio I will use the example of bioinformatics to showcase the util
 rm -r bioinf_ex
 cd ..
 cp GCF_009858895.2_ASM985889v3_genomic.fna.gz Portfolio/
-cp GCF_009858895.2_ASM985889v3_protein.faa.gz Portfolio/
 
 ```
 
 
-We start in a folder containing the files downloaded from the link above:
+We start in a folder containing the file downloaded from the link above:
 
 ```{r, engine='bash', eval = FALSE}
 ls
 GCF_009858895.2_ASM985889v3_genomic.fna.gz  
-GCF_009858895.2_ASM985889v3_protein.faa.gz
 ```
 
 We first create a folder to work within using the `mkdir` command and use the `cd` command to move into this new file. Finally we can use the `ls` command to view the contents of this folder:
@@ -63,18 +61,17 @@ As expected, the directory is empty, but we can move the genome and protein file
 
 
 ```{r, engine='bash'}
-mv GCF_009858895.2_ASM985889v3_protein.faa.gz -t bioinf_ex/
 mv GCF_009858895.2_ASM985889v3_genomic.fna.gz -t bioinf_ex/
 cd bioinf_ex/
 ```
+
 ```{r, include=FALSE}
 opts_knit$set(root.dir ="/home/ac18826/Documents/COMPASS/First_Year/TB2/Statistical_Computing/Intro_to_Linux/Portfolio/bioinf_ex/")
 ```
 We now check these files have been successfully moved:
 ```{r, engine ='bash', eval = FALSE}
 ls 
-GCF_009858895.2_ASM985889v3_genomic.fna.gz  
-GCF_009858895.2_ASM985889v3_protein.faa.gz
+GCF_009858895.2_ASM985889v3_genomic.fna.gz
 ```
 
 
@@ -82,23 +79,20 @@ We notice the `.gz` file extension, meaning we need to unzip the files. We can d
 
 ```{r, engine = 'bash'}
 gzip -d GCF_009858895.2_ASM985889v3_genomic.fna.gz
-gzip -d GCF_009858895.2_ASM985889v3_protein.faa.gz
 ```
 
 ```{r, engine='bash', eval = FALSE}
 ls
 GCF_009858895.2_ASM985889v3_genomic.fna
-GCF_009858895.2_ASM985889v3_protein.fa
 ```
 
 We finally rename the files to something more convenient with the `mv` command:
 
 ```{bash}
 mv GCF_009858895.2_ASM985889v3_genomic.fna genomic.fna
-mv GCF_009858895.2_ASM985889v3_protein.faa protein.faa
 ```
 
-# Genomic Data
+# Evaluating Genomic Data
 
 This section focuses on the genomic.fna file. We first use the `head` command to view the first few lines of the file:
 ```{bash}
@@ -163,4 +157,30 @@ grep -ob AACTCAGGCCTA genomic_new.fna
 29520:AACTCAGGCCTA
 ```
 
-We can now write the gene to a new file 
+We can now write the gene to a new file using the `cut` command, so we want the 28274th character to the 29520th character:
+
+```{r, engine = 'bash'}
+cut -c 28274-29532 genomic_new.fna > phosphoprotein.txt 
+```
+
+We can check the new `phosphoprotein.txt` looks how we expect it to:
+```{r, engine = 'bash'}
+head phosphoprotein.txt
+ATGTCTGATAATGGACCCCAAAATCAGCGAAATGCACCCCGCATTACGTTTGGTGGACCCTCAGATTCAACTGGCAGTAACCAGAA
+TGGAGAACGCAGTGGGGCGCGATCAAAACAACGTCGGCCCCAAGGTTTACCCAATAATACTGCGTCTTGGTTCACCGCTCTCACTC
+AACATGGCAAGGAAGACCTTAAATTCCCTCGAGGACAAGGCGTTCCAATTAACACCAATAGCAGTCCAGATGACCAAATTGGCTAC
+TACCGAAGAGCTACCAGACGAATTCGTGGTGGTGACGGTAAAATGAAAGATCTCAGTCCAAGATGGTATTTCTACTACCTAGGAAC
+TGGGCCAGAAGCTGGACTTCCCTATGGTGCTAACAAAGACGGCATCATATGGGTTGCAACTGAGGGAGCCTTGAATACACCAAAAG
+ATCACATTGGCACCCGCAATCCTGCTAACAATGCTGCAATCGTGCTACAACTTCCTCAAGGAACAACATTGCCAAAAGGCTTCTAC
+GCAGAAGGGAGCAGAGGCGGCAGTCAAGCCTCTTCTCGTTCCTCATCACGTAGTCGCAACAGTTCAAGAAATTCAACTCCAGGCAG
+CAGTAGGGGAACTTCTCCTGCTAGAATGGCTGGCAATGGCGGTGATGCTGCTCTTGCTTTGCTGCTGCTTGACAGATTGAACCAGC
+TTGAGAGCAAAATGTCTGGTAAAGGCCAACAACAACAAGGCCAAACTGTCACTAAGAAATCTGCTGCTGAGGCTTCTAAGAAGCCT
+CGGCAAAAACGTACTGCCACTAAAGCATACAATGTAACACAAGCTTTCGGCAGACGTGGTCCAGAACAAACCCAAGGAAATTTTGG
+GGACCAGGAACTAATCAGACAAGGAACTGATTACAAACATTGGCCGCAAATTGCACAATTTGCCCCCAGCGCTTCAGCGTTCTTCG
+GAATGTCGCGCATTGGCATGGAAGTCACACCTTCGGGAACGTGGTTGACCTACACAGGTGCCATCAAATTGGATGACAAAGATCCA
+AATTTCAAAGATCAAGTCATTTTGCTGAATAAGCATATTGACGCATACAAAACATTCCCACCAACAGAGCCTAAAAAGGACAAAAA
+GAAGAAGGCTGATGAAACTCAAGCCTTACCGCAGAGACAGAAGAAACAGCAAACTGTGACTCTTCTTCCTGCTGCAGATTTGGATG
+ATTTCTCCAAACAATTGCAACAATCCATGAGCAGTGCTGACTCAACTCAGGCCTA
+```
+
+We can see here, the gene has been successfully isolated.

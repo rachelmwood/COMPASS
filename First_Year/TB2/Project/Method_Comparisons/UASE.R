@@ -14,7 +14,8 @@ UASE <- function(sim1, sim2,d = 2){
   U <- svd$u %*% diag(sqrt(svd$d))
   U <- U[, 1:d]
   left <- as.data.frame(cbind(U, as.factor(population)))
-  colnames(left) <- c("1", "2", "population")
+  d_char <- as.character(1:d)
+  colnames(left) <- c(d_char, "population")
   
   t <- rep(1:2, each = nrow(A))
   index <- rep(1:nrow(A),2)
@@ -24,7 +25,7 @@ UASE <- function(sim1, sim2,d = 2){
                                as.factor(population), 
                                as.factor(index)))
   
-  colnames(right) <- c("1", "2"," discipline", "population", "observation")
+  colnames(right) <- c(d_char," discipline", "population", "observation")
   
   return(list(left = left, right = right))
 }

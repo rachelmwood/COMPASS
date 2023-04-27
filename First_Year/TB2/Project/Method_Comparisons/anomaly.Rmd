@@ -1,0 +1,46 @@
+---
+title: "Anomaly"
+author: "Rachel Wood"
+date: "2023-04-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+theme_set(theme_bw())
+set.seed(12345)
+```
+# Data generation
+
+We use the `ClaritySim` package to create the `original' data generated according to some tree structure, which we will then manipulate to test the different methods:
+
+```{r}
+library(ClaritySim)
+n=100 
+k=10
+original <- simulateCoalescent(n,k,
+                         sigma0=0.08,
+                         Amodel="uniform",
+                         alpha=0,
+                         minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
+plot(original$tree)
+```
+
+We then add an anomaly - moving half of the population at node 10 to node 9 and generate new data for this altered structure:
+
+```{r}
+A <- original$A
+A[95:100,] <- A[85:90,]
+
+anomaly <- original
+anomaly$A <- A
+anomaly <- simData(anomaly)
+```
+
+```{r, message=FALSE}
+source("UASE.R")
+
+anomaly_UASE <-UASE(original, anomaly, d = 10)
+plot_UASE(anomaly_UASE)
+```

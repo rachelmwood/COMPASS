@@ -1,0 +1,12 @@
+---
+title: "Intel TBB Portfolio"
+author: "Rachel Wood"
+date: "2023-04-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Parallel Programming

@@ -1,0 +1,50 @@
+---
+title: "Portfolio 8"
+author: "Rachel Wood"
+date: "2023-04-26"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this portfolio, we use the Pima Indians Diabetes dataset:
+```{r}
+library(mlbench)
+data("PimaIndiansDiabetes")
+head(PimaIndiansDiabetes)
+```
+
+where we model the response $y_i$ is the `diabetes` variable and model it using a logistic regression:
+$$
+\mathbb{P}_{\alpha, \beta} (Y_i = 1) = \frac{1}{1+ e^{-\alpha -\beta^T x_i}}
+$$
+
+which gives the likelihood funcion
+$$
+L_n(\alpha, \beta) = \prod_{i = 1}^n \mathbb{P}_{\alpha, \beta} (Y_i = y_i)
+$$
+Then the posterior is 
+$$
+\pi (\alpha , \beta|y) \propto L_n (\alpha, \beta) \pi (\alpha, \beta)
+$$
+where $\pi (\alpha, \beta)$ is the prior. 
+
+# 1. Choosing a proposal distribution
+
+Before applying the MH algorithm, we need to choose a proposal distribution $Q$. For this we use 
+$$
+Q (z, dz') = \mathcal{N}_{p+1} (z, c \mathbf{\Sigma}_n)
+$$
+where $c>0$ is a tuning parameter and 
+# 2. Implementing the MH algorithm
+
+# 3. Convergence
+
+# 4. Modifying Q
+
+# 5. Marginal posterior distributions
+

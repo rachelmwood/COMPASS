@@ -3,7 +3,8 @@ title: "OpenMP"
 author: "Rachel Wood"
 date: "2023-03-10"
 output: 
-  pdf_document: default
+  pdf_document: 
+    pandoc_args: "--highlight=breezedark"
   html_document: default
 header-includes: 
   - \usepackage{tikz}
@@ -11,7 +12,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 set.seed(1)
 ```
 
@@ -162,7 +163,7 @@ int main()
 ```
 
 Now supposing the above is contained in a file called `pi.cpp` we can compile and run it in the terminal as follows:
-```{r, engine='bash'}
+```{r, engine='bash', eval = TRUE}
 g++ -fopenmp pi.cpp -o pi
 ./pi
 ```
