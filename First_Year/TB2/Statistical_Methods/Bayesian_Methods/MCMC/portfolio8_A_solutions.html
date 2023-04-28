@@ -374,17 +374,44 @@ regression: <span class="math display">\[
 \mathbb{P}_{\alpha, \beta} (Y_i = 1) = \frac{1}{1+ e^{-\alpha -\beta^T
 x_i}}
 \]</span></p>
-<p>which gives the likelihood funcion <span class="math display">\[
+<p>which gives the likelihood function <span class="math display">\[
 L_n(\alpha, \beta) = \prod_{i = 1}^n \mathbb{P}_{\alpha, \beta} (Y_i =
 y_i)
 \]</span> Then the posterior is <span class="math display">\[
 \pi (\alpha , \beta|y) \propto L_n (\alpha, \beta) \pi (\alpha, \beta)
+\]</span> with the log posterior given by <span class="math display">\[
+\log \pi(\alpha,\beta|y) = \sum_{i =1}^n \left(y_i \log  \frac{1}{1+
+e^{-\alpha -\beta^T x_i}} + (1-y_i) \log \frac{e^{-\alpha -\beta^T
+x_i}}{1+ e^{-\alpha -\beta^T x_i}} \right) + \pi(\alpha, \beta  )
 \]</span> where <span class="math inline">\(\pi (\alpha, \beta)\)</span>
 is the prior.</p>
 <div id="choosing-a-proposal-distribution" class="section level1">
 <h1>1. Choosing a proposal distribution</h1>
 <p>Before applying the MH algorithm, we need to choose a proposal
-distribution <span class="math inline">\(Q\)</span>,</p>
+distribution <span class="math inline">\(Q\)</span>. For this we use
+<span class="math display">\[
+Q (z, dz&#39;) = \mathcal{N}_{p+1} (z, c \mathbf{\Sigma}_n)
+\]</span> for tuning parameter <span class="math inline">\(c&gt;0\)</span> and <span class="math display">\[
+\mu_n = \mathop{\mathrm{arg\,max}}_{(\alpha, \beta) \in \mathbb{R}^p}
+\log \pi (\alpha, \beta | y), \hspace{1cm} \mathbf{\Sigma}_n =
+-(\mathbf{H}_n(\mu_q))^{-1}
+\]</span></p>
+<p>Choosing a standard multivariate normal, we write a function for the
+negative log posterior to be minimised:</p>
+<pre class="r"><code>library(mvtnorm)
+neg_log_posterior &lt;- function(theta, X, y){
+  alpha &lt;- theta[1]
+  beta &lt;- theta[-1]
+  
+  link &lt;- exp(- alpha - beta %*% X)
+  
+  ll &lt;- sum(y %*% log(1/(1+link)) + (1 - y) %*% (link/(1+link)))
+  
+  prior &lt;- dmvnorm(theta)
+  
+  return(-ll -prior)
+}</code></pre>
+<p>We can now use <code>optim()</code> to find <span class="math inline">\(\mu_n\)</span></p>
 </div>
 <div id="implementing-the-mh-algorithm" class="section level1">
 <h1>2. Implementing the MH algorithm</h1>

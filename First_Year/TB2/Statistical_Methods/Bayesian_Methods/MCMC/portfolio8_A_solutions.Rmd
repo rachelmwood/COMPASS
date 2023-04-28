@@ -5,6 +5,8 @@ date: "2023-04-26"
 output:
   html_document: default
   pdf_document: default
+header-includes:
+  - \DeclareMathOperator*{\argmax}{arg\,max}
 ---
 
 ```{r setup, include=FALSE}
@@ -16,6 +18,7 @@ For this portfolio, we use the Pima Indians Diabetes dataset:
 library(mlbench)
 data("PimaIndiansDiabetes")
 head(PimaIndiansDiabetes)
+
 ```
 
 where we model the response $y_i$ is the `diabetes` variable and model it using a logistic regression:
@@ -23,7 +26,7 @@ $$
 \mathbb{P}_{\alpha, \beta} (Y_i = 1) = \frac{1}{1+ e^{-\alpha -\beta^T x_i}}
 $$
 
-which gives the likelihood funcion
+which gives the likelihood function
 $$
 L_n(\alpha, \beta) = \prod_{i = 1}^n \mathbb{P}_{\alpha, \beta} (Y_i = y_i)
 $$
@@ -31,18 +34,88 @@ Then the posterior is
 $$
 \pi (\alpha , \beta|y) \propto L_n (\alpha, \beta) \pi (\alpha, \beta)
 $$
+with the log posterior given by 
+$$
+\log \pi(\alpha,\beta|y) = \sum_{i =1}^n \left(y_i \log  \frac{1}{1+ e^{-\alpha -\beta^T x_i}} + (1-y_i) \log \frac{e^{-\alpha -\beta^T x_i}}{1+ e^{-\alpha -\beta^T x_i}} \right) + \pi(\alpha, \beta  )
+$$
 where $\pi (\alpha, \beta)$ is the prior. 
 
 # 1. Choosing a proposal distribution
+
+
+
 
 Before applying the MH algorithm, we need to choose a proposal distribution $Q$. For this we use 
 $$
 Q (z, dz') = \mathcal{N}_{p+1} (z, c \mathbf{\Sigma}_n)
 $$
-where $c>0$ is a tuning parameter and 
+for tuning parameter $c>0$ and
+$$
+\mu_n = \argmax_{(\alpha, \beta) \in \mathbb{R}^p} \log \pi (\alpha, \beta | y), \hspace{1cm} \mathbf{\Sigma}_n = -(\mathbf{H}_n(\mu_q))^{-1} 
+$$
+
+Choosing a standard multivariate normal, we write a function for the negative log posterior to be minimised:
+```{r}
+library(mvtnorm)
+neg_log_posterior <- function(theta, X, y){
+  alpha <- theta[1]
+  beta <- theta[-1]
+  
+  link <- exp(- alpha - beta %*% t(as.matrix(X)))
+  ll <- sum(y %*% log(1/(1+link)) + (1 - y) %*% (link/(1+link)))
+  
+  prior <- dmvnorm(theta, mean = rep(1,9))
+  
+  return(-ll -prior)
+}
+```
+
+We can now use `optim()` to find $\mu_n$ and use this to get $\mathbf{\Sigma}_n$:
+```{r}
+library(numDeriv)
+y <- PimaIndiansDiabetes$diabetes
+levels(y) <- c("0","1")
+y <- as.numeric(y)
+X <- PimaIndiansDiabetes[, -9]
+
+mu_min <- optim(rep(0, 9), neg_log_posterior, X = X, y = y)
+mu_n <- mu_min$par
+
+pos_log_post <- function(...) -neg_log_posterior(...)
+
+sigma_n <- - solve(hessian(pos_log_post, x= mu_n, X = X,y = y))
+```
+
+
+
 # 2. Implementing the MH algorithm
+Since we now have a proposal distribution, we can now run the MH algorithm:
+```{r}
+logistic_MH <- function(z_0,c, sigma_n, tmax, X, y){
+  zs <- matrix(nrow =tmax, ncol = length(z_0))
+  z_current <- z_0
+  sigma_prime <- c* sigma_n 
+  accepted <- 0
+  for (i in 1:tmax){
+    z_new <- rmvnorm(1, z_current, sigma_prime)
+    
+    log_alpha <- (exp(-neg_log_posterior(z_new, X,y)) + dmvnorm(z_current, z_new, sigma_prime)) /(exp(-neg_log_posterior(z_current, X,y)) + dmvnorm(z_new, z_current, sigma_prime))
+    return(log_alpha)
+    if (runif(1) < exp(log_alpha)){
+      
+      z_current <- znew
+      accepted <- accepted + 1
+    }
+    zs[i] <- z_current
+  }
+  return(list(zs = zs, acceptance_rate = accepted/tmax))
+}
+```
 
 # 3. Convergence
+```{r, warning = FALSE}
+mh<- logistic_MH(rep(0,9), 1, sigma_n, 10000, X, y)
+```
 
 # 4. Modifying Q
 
