@@ -3,13 +3,15 @@ title: "Portfolio 8"
 author: "Rachel Wood"
 date: "2023-04-26"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 header-includes:
   - \DeclareMathOperator*{\argmax}{arg\,max}
 ---
 
 ```{r setup, include=FALSE}
+library(ggplot2)
+theme_set(theme_bw())
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -43,8 +45,6 @@ where $\pi (\alpha, \beta)$ is the prior.
 # 1. Choosing a proposal distribution
 
 
-
-
 Before applying the MH algorithm, we need to choose a proposal distribution $Q$. For this we use 
 $$
 Q (z, dz') = \mathcal{N}_{p+1} (z, c \mathbf{\Sigma}_n)
@@ -54,70 +54,143 @@ $$
 \mu_n = \argmax_{(\alpha, \beta) \in \mathbb{R}^p} \log \pi (\alpha, \beta | y), \hspace{1cm} \mathbf{\Sigma}_n = -(\mathbf{H}_n(\mu_q))^{-1} 
 $$
 
-Choosing a standard multivariate normal, we write a function for the negative log posterior to be minimised:
+
+Since $\mathbf{\Sigma}_n$ can be seen as an estimate of the variance of the covariance matrix of $(\alpha, \beta)$ under the posterior. We can then use the `glm()` function to get this:
 ```{r}
-library(mvtnorm)
-neg_log_posterior <- function(theta, X, y){
-  alpha <- theta[1]
-  beta <- theta[-1]
-  
-  link <- exp(- alpha - beta %*% t(as.matrix(X)))
-  ll <- sum(y %*% log(1/(1+link)) + (1 - y) %*% (link/(1+link)))
-  
-  prior <- dmvnorm(theta, mean = rep(1,9))
-  
-  return(-ll -prior)
-}
-```
+data <- PimaIndiansDiabetes
+y <- as.numeric((data$diabetes))-1
+X <- scale(data[,1:8])
 
-We can now use `optim()` to find $\mu_n$ and use this to get $\mathbf{\Sigma}_n$:
-```{r}
-library(numDeriv)
-y <- PimaIndiansDiabetes$diabetes
-levels(y) <- c("0","1")
-y <- as.numeric(y)
-X <- PimaIndiansDiabetes[, -9]
+fit <- glm(y ~ X, family = "binomial")
+z_0 <- fit$coefficients
+Sigma_n <- summary(fit)$cov.scaled
 
-mu_min <- optim(rep(0, 9), neg_log_posterior, X = X, y = y)
-mu_n <- mu_min$par
-
-pos_log_post <- function(...) -neg_log_posterior(...)
-
-sigma_n <- - solve(hessian(pos_log_post, x= mu_n, X = X,y = y))
 ```
 
 
 
 # 2. Implementing the MH algorithm
-Since we now have a proposal distribution, we can now run the MH algorithm:
+
+For the acceptance probability at each iteration, we also need a function to compute the posterior likelihood for the new and old parameter values. For this we choose a flat prior for simplicity:
+
+```{r}
+library(mvtnorm)
+post_likelihood <- function(par, X, y){
+  
+  alpha <- par[1]
+  beta <- par[2:9]
+  p <- 1 - 1 / (1 + exp(alpha + beta%*%t(X)))
+  likelihood <- exp(sum(dbinom(y, size=1, prob=p, log=TRUE)) )
+
+  return(likelihood)
+}
+```
+
+Since we now have a proposal distribution and a posterior likelihood, we can now run the MH algorithm:
 ```{r}
 logistic_MH <- function(z_0,c, sigma_n, tmax, X, y){
-  zs <- matrix(nrow =tmax, ncol = length(z_0))
+  zs <- matrix(NA, nrow =tmax, ncol = length(z_0))
   z_current <- z_0
-  sigma_prime <- c* sigma_n 
+  z_current_ll <- post_likelihood(z_current, X,y)
+  sigma_prime <- c * sigma_n 
   accepted <- 0
   for (i in 1:tmax){
     z_new <- rmvnorm(1, z_current, sigma_prime)
-    
-    log_alpha <- (exp(-neg_log_posterior(z_new, X,y)) + dmvnorm(z_current, z_new, sigma_prime)) /(exp(-neg_log_posterior(z_current, X,y)) + dmvnorm(z_new, z_current, sigma_prime))
-    return(log_alpha)
-    if (runif(1) < exp(log_alpha)){
+    z_new_ll <- post_likelihood(z_new, X, y)
+    alpha <- log(z_new_ll) +  dmvnorm(z_current, z_new, sigma_prime, log = TRUE)- log(z_current_ll) - dmvnorm(z_new, z_current, sigma_prime, log = TRUE)
+    if (runif(1) < min(1,exp(alpha))){
       
-      z_current <- znew
+      z_current <- z_new
+      z_current_ll <- z_new_ll
       accepted <- accepted + 1
+      
     }
-    zs[i] <- z_current
+    zs[i,] <- z_current
   }
   return(list(zs = zs, acceptance_rate = accepted/tmax))
 }
 ```
 
 # 3. Convergence
+
+We now run the algorithm with $c=1$ and test for convergence.
 ```{r, warning = FALSE}
-mh<- logistic_MH(rep(0,9), 1, sigma_n, 10000, X, y)
+mh<- logistic_MH(z_0, 1, Sigma_n, 10000, X, y)
 ```
+We get the acceptance rate to be:
+```{r}
+mh$acceptance_rate
+```
+
+
+We then produce trace plots:
+```{r, message = FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+colnames(mh$zs) <- c("intercept", colnames(data)[1:8])
+zs_plot <- mh$zs %>%
+  as_tibble() %>% 
+  mutate(iteration = 1:10000) %>%
+  pivot_longer(cols = 1:9)
+
+ggplot(zs_plot, aes(iteration, value)) +
+  geom_line(colour = "steelblue3") +
+  facet_wrap(vars(name))
+
+```
+We also produce some autocorrelation plots:
+```{r}
+par(mfrow = c(3,3))
+for (i in 1:9){
+  acf(mh$zs[,i], main = colnames(data)[i])
+}
+```
+From these results, we see the acceptance ratio is quite low and the autocorrelation of our samples decreases quite slowly.
 
 # 4. Modifying Q
 
+We then try the above again with a smaller $c$ in the hopes that this will improve our convergence:
+```{r, warning = FALSE}
+mh_new<- logistic_MH(z_0, 0.75, Sigma_n, 10000, X, y)
+```
+The new acceptance rate is then:
+```{r}
+mh_new$acceptance_rate
+```
+
+We then produce trace plots and autocorrelation plots as before:
+```{r, message = FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+colnames(mh_new$zs) <- c("intercept", colnames(data)[1:8])
+zs_plot <- mh$zs %>%
+  as_tibble() %>% 
+  mutate(iteration = 1:10000) %>%
+  pivot_longer(cols = 1:9)
+
+ggplot(zs_plot, aes(iteration, value)) +
+  geom_line(colour = "steelblue3") +
+  facet_wrap(vars(name))
+
+```
+
+```{r}
+par(mfrow = c(3,3))
+for (i in 1:9){
+  acf(mh_new$zs[,i], main = colnames(data)[i])
+}
+```
+We can see from these results the acceptance rate is higher and the autocorrelation of samples decreases more quickly.
+
 # 5. Marginal posterior distributions
+We can now also plot the approximate marginal posteriors for each parameter using histograms:
+```{r}
+ggplot(zs_plot, aes(value)) +
+  geom_histogram() +
+  facet_wrap(vars(name))
+```
 
