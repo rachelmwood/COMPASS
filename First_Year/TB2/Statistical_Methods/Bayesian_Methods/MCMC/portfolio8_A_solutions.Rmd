@@ -97,7 +97,7 @@ logistic_MH <- function(z_0,c, sigma_n, tmax, X, y){
   for (i in 1:tmax){
     z_new <- rmvnorm(1, z_current, sigma_prime)
     z_new_ll <- post_likelihood(z_new, X, y)
-    alpha <- log(z_new_ll) +  dmvnorm(z_current, z_new, sigma_prime, log = TRUE)- log(z_current_ll) - dmvnorm(z_new, z_current, sigma_prime, log = TRUE)
+    alpha <- log(z_new_ll)- log(z_current_ll) 
     if (runif(1) < min(1,exp(alpha))){
       
       z_current <- z_new
