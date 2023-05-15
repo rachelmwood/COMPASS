@@ -194,7 +194,7 @@ ggplot() +
 ```
 
 We now write the equivalent function in Rcpp:
-```{r, engine='Rcpp'}
+```{r, engine='Rcpp', eval = FALSE}
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(roptim)]]
 
