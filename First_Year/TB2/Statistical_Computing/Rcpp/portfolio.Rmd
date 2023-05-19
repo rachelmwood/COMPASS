@@ -156,9 +156,9 @@ mse_lambda <- function(log_lambda, x, y, x_new, y_new){
   return(sum((fitted - y_new)^2))
 }
 
-lambda_cv <- function(x, y, nfolds = 5){
+lambda_cv <- function(x, y, groups){
   n <- length(x)
-  groups <- sample(rep(1:nfolds, length.out = n), size = n)
+  
   
   lambdas <- numeric(nfolds)
   mse <- numeric(nfolds)
@@ -183,7 +183,9 @@ lambda_cv <- function(x, y, nfolds = 5){
 
 We now plot the smooth for the returned value $\lambda$ to see if this seems reasonable:
 ```{r}
-hat_lambda <- lambda_cv(x, y)
+nfolds <- 5
+groups <- sample(rep(1:nfolds, length.out = n), size = n)
+hat_lambda <- lambda_cv(x, y, groups)
 opt_smooth <- meanKRS(x, y, xnew, hat_lambda)
 opt_data <- tibble(xnew = xnew,
          fitted = opt_smooth)
@@ -193,15 +195,22 @@ ggplot() +
             color = "mediumorchid3", linewidth = 0.7)
 ```
 
-We now write the equivalent function in Rcpp:
-```{r, engine='Rcpp', eval = FALSE}
+We now write the equivalent function in Rcpp: 
+
+\textbf{REVISIT}
+```{r, engine='Rcpp'}
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(roptim)]]
 
 #include <cmath>  
+#include <cstddef>
+
+#include <algorithm>
+
 #include <RcppArmadilloExtensions/sample.h>
 #include <RcppArmadillo.h>
 #include <roptim.h>
+#include <functional>
 using namespace Rcpp;
 using namespace arma;
 using namespace roptim;
@@ -220,57 +229,165 @@ NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const
   return mu;
 }
 
+double mse_lambda(const double lambda, const NumericVector x,const NumericVector y,const NumericVector x_new, const NumericVector y_new){
+  
+  
+  NumericVector fitted = meanKRS_Rcpp_I(x, y, x_new, lambda);
+  return sum(pow(fitted - y_new, 2));
+}
+
+
+NumericVector x_train, y_train, y_test, x_test;
+
+
 // [[Rcpp::export]]
-double lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const NumericVector groups) {
+
+
+NumericVector lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const NumericVector groups) {
   
-  NumericVector x_prime {x};
-  NumericVector y_prime {y};
-  NumericVector groups_prime {groups};
-  
-  int n = x.size();
-  
-  int nfolds = unique(groups).size();
-  
-  NumericVector lambdas(nfolds);
-  NumericVector mse(nfolds);
-  
-  for (int i =1; i <= nfolds; i++){
+    int n = x.size();
+ 
+    int nfolds = unique(groups).size();
+ 
+    NumericVector lambdas(nfolds);
+    NumericVector mse(nfolds);
+ 
+    for (int i =1; i <= nfolds; i++){
+        x_train = x[groups != i];
+        y_train = y[groups != i];
     
-    double mse(const double log_lambda){
-        NumericVector x_train = x_prime[groups_prime != i];
-        NumericVector y_train = y_prime[groups_prime != i];
+        x_test = x[groups == i];
+        y_test = y[groups == i];
+     
     
-        NumericVector x_test = x_prime[groups_prime == i];
-        NumericVector y_test = y[groups_prime == i];
-        double lambda = exp(log_lambda);
-        NumericVector fitted = meanKRS_Rcpp_I(x_train, y_train, x_test, lambda);
-        return sum(pow(fitted - y_test, 2));
-    }
-    
-    class MSE : public Functor {
-      double operator()(const double log_lambda){
-        
-        return mse(log_lambda);
+    class Mse : public Functor {
+      public:
+      double operator()(const arma::vec& log_lambda) override {
+        double lambda = exp(log_lambda[0]);
+        // std::function<double(const double log_lambda)> mse = { mse_lambda(log_lambda, x_train, y_train, x_test, y_test)};
+        return  mse_lambda(lambda, x_train, y_train, x_test, y_test);
       }
-    }
+    };
     
-    MSE fun;
-    Roptim<MSE> opt("BFGS");
+    Mse fun;
+    Roptim<Mse> opt("BFGS");
     
-    opt.minimize(fun, 0.02);
+    arma::vec initial = {0.02};
+    opt.minimize(fun, initial);
     
-    lambdas[i] = opt.par();Rcpp::RcppArmadillo::
+    
+    arma::vec par = opt.par();
+    lambdas[i] = par[0];
     mse[i] = opt.value();
     
   }
   
   int min_ind = which_min(mse);
   
-  return lambdas[i];
+  return lambdas;
   
 }
 
 
+
 ```
 
+```{r}
+hat_lambda <- lambda_cv_Rcpp(x, y, groups)
+```
+
+
+## Lambda as a function of x
+
+We can see merely from looking at the plot, the shape of the function changes at approximately $x = 0.5$, and so these two sections of the function will need different values of $\lambda$. We address this by modelling $\lambda = \lambda(x)$. We do this by fitting the model as before for a fixed $\lambda$ (for this we can use the cross-validated value of $\lambda$) and consider the residuals $r_1, \ldots, r_n$.
+
+We can then model these under another KRS with the same $\lambda$ - producing estimates of the absolute values of the residuals $\hat v_1, \ldots, \hat v_n$. We can then fit
+$$
+\hat \mu(x) = \frac{\sum_{i =1}^n \kappa_{\lambda_i} (x, x_i) \ y_i }{\sum_{i =1}^n \kappa_{\lambda_i} (x, x_i) }
+$$
+with $\lambda_i = \lambda\tilde w_i$ where $\tilde w_i = \frac{nw_i}{\sum_{i=1}^n w_i}$ for $w_i = \hat v_i^{-1}$.
+
+We implement this in R with the `mean_var_KRS()` function:
+```{r}
+mean_var_KRS <- function(y, x, xnew, lambda){
+  n <- length(x)
+  nnew <- length(xnew)
+  mu <- res <- numeric(n) 
+   
+  out <- madHat <- numeric(nnew)
+ 
+  for(ii in 1:n){
+    mu[ii] <- sum( dnorm(x, x[ii], lambda) * y ) / sum( dnorm(x, x[ii], lambda) )   
+  }
+ 
+  resAbs <- abs(y - mu)
+  for(ii in 1:nnew){
+    madHat[ii] <- sum( dnorm(x, xnew[ii], lambda) * resAbs ) / sum( dnorm(x, xnew[ii], lambda) )   
+  }
+ 
+  w <- 1 / madHat
+  w <- w / mean(w)
+ 
+  for(ii in 1:nnew){
+    out[ii] <- sum( dnorm(x, xnew[ii], lambda * w[ii]) * y ) / 
+             sum( dnorm(x, xnew[ii], lambda * w[ii]) )   
+  }
+ 
+  return(out)
+}
+```
+
+This gives us the result:
+```{r}
+muSmoothAdapt <- mean_var_KRS( y, x, xnew, 0.06)
+adapt_data <- tibble(xnew = xnew, fitted = muSmoothAdapt)
+ggplot() +
+  geom_point(data = data, aes(x, y), size = 0.8) +
+  geom_line(data = adapt_data, aes(x = xnew,y = fitted), 
+            color = "mediumorchid3", linewidth = 0.7)
+```
+
+
+We now write the complementary `Rcpp` version:
+```{r, engine='Rcpp'}
+#include <Rcpp.h>
+#include <Rmath.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, const NumericVector xnew, const double lambda){
+  int n = x.size();
+  int nnew = xnew.size();
+  
+  NumericVector mu(n), res(n), out(nnew), madHat(nnew);
+  
+  for (int i = 0; i < nnew; i++){
+    mu[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
+  }
+  
+  NumericVector resAbs = abs(y-mu);
+  
+  for (int i =0; i < nnew; i++){
+    madHat[i] = sum(dnorm(x,xnew[i], lambda)*resAbs)/ sum(dnorm(x,xnew[i], lambda));
+  }
+  
+  NumericVector w = 1/madHat;
+  w = w/mean(w);
+  
+  for (int i =0; i <nnew; i++){
+    out[i] <- sum(dnorm(x, xnew[i], lambda * w[i])*y) / sum(dnorm(x, xnew[i], lambda *w[i]));
+  }
+  
+  return out;
+}
+
+```
+
+We now check these two functions produce the same values:
+
+```{r}
+muSmoothAdapt_Rcpp <- mean_var_KRS_Rcpp( y, x, xnew, 0.06)
+max(abs(muSmoothAdapt - muSmoothAdapt_Rcpp))
+
+```
 
