@@ -1,0 +1,144 @@
+{
+  "main": {
+    "id": "955b97db15fc1372",
+    "type": "split",
+    "children": [
+      {
+        "id": "5a6e7c50d0588f9d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "59aa4cc08b06bb07",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "8d4018a78e11460d",
+    "type": "split",
+    "children": [
+      {
+        "id": "9d01fb0c9ac04fac",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9c7e8b9287ce85ac",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "29d7ef50d1d69c3a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "5c45e699eebb4ee6",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "20b6c3c73b4756d7",
+    "type": "split",
+    "children": [
+      {
+        "id": "668c0d4be81f0393",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "209e3eddac852d73",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": false
+              }
+            }
+          },
+          {
+            "id": "0d9e3ebb3d758c7d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "7640e442f7648392",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "9d95f8db1f5ad3e4",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "209e3eddac852d73",
+  "lastOpenFiles": [
+    "First_Year/TB2/Statistical_Computing/Advanced_Rcpp/LA_Rcpp_Portfolio.pdf"
+  ]
+}
