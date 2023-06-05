@@ -107,7 +107,10 @@ ggplot() +
             aes(x, fitted, color = lambda), linewidth = 0.7)
 ```
 We now use Rcpp to write a C++ version of `meanKRS()`:
+```{r}
+library(Rcpp)
 
+```
 
 ```{r, engine='Rcpp'}
 #include <Rcpp.h>
@@ -318,7 +321,6 @@ mean_var_KRS <- function(y, x, xnew, lambda){
   }
  
   resAbs <- abs(y - mu)
-  
   for(ii in 1:nnew){
     madHat[ii] <- sum( dnorm(x, xnew[ii], lambda) * resAbs ) / sum( dnorm(x, xnew[ii], lambda) )   
   }
@@ -347,13 +349,13 @@ ggplot() +
 
 
 We now write the complementary `Rcpp` version:
-```{r, engine = 'Rcpp', eval = FALSE}
+```{r, engine='Rcpp'}
 #include <Rcpp.h>
 #include <Rmath.h>
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, const NumericVector xnew, const double lambda) {
+NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, const NumericVector xnew, const double lambda){
   int n = x.size();
   int nnew = xnew.size();
   
@@ -362,37 +364,33 @@ NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, co
   NumericVector out(nnew);
   NumericVector madHat(nnew);
   
-  for(int ii = 0; ii < n; ii++){
-    mu[ii] = sum(dnorm(x, x[ii], lambda) * y)/sum( dnorm(x, x[ii], lambda));
+  for (int i = 0; i < nnew; i++){
+    mu[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
   }
   
-  NumericVector resAbs = abs(y - mu);
+  NumericVector resAbs = abs(y-mu);
   
-  for(int ii = 0; ii < nnew; ii++){
-    
-    madHat[ii] = sum(dnorm(x, xnew[ii], lambda) * resAbs)/ sum(dnorm(x, xnew[ii], lambda));
-    
+  for (int i =0; i < nnew; i++){
+    madHat[i] = sum(dnorm(x,xnew[i], lambda)*resAbs)/sum(dnorm(x,xnew[i], lambda));
   }
+  return madHat;
+  NumericVector w = 1/madHat;
+  w = w/mean(w);
   
-  NumericVector w = 1 / madHat;
-  w = w / mean(w);
-  for(int ii = 0; ii < nnew; ii++){
-    out[ii] = sum(dnorm(x, xnew[ii], lambda *w[ii]) * y)/ sum( dnorm(x, xnew[ii], lambda *w[ii]));
+  for (int i =0; i <nnew; i++){
+    out[i] <- sum(dnorm(x, xnew[i], lambda * w[i])*y) / sum(dnorm(x, xnew[i], lambda *w[i]));
   }
   
   return out;
 }
+
 ```
 
-We now compute the Rcpp version and check it is consistent with our previous results:
-```{r}
-muSmoothAdaptRcpp <- mean_var_KRS_Rcpp( y, x, xnew, 0.06)
-max(abs(muSmoothAdapt - muSmoothAdaptRcpp))
-```
+We now check these two functions produce the same values:
 
-And we can now compare the running time from these:
-```{r}
-microbenchmark("R" = mean_var_KRS( y, x, xnew, 0.06),
-               "Rcpp" = mean_var_KRS_Rcpp( y, x, xnew, 0.06))
+```{r, eval=FALSE}
+muSmoothAdapt_Rcpp <- mean_var_KRS_Rcpp( y, x, xnew, 0.06)
+max(abs(muSmoothAdapt - muSmoothAdapt_Rcpp))
+
 ```
 

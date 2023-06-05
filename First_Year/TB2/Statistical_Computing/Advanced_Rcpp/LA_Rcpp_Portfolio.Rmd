@@ -3,11 +3,11 @@ title: "LA with RcppArmadillo"
 author: "Rachel Wood"
 date: "2023-03-28"
 output:
+  pdf_document: 
+    highlight: tango
   html_document:
     df_print: paged
     highlight: breezedark
-  pdf_document: 
-    highlight: tango
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{fvextra}
@@ -140,26 +140,10 @@ microbenchmark(R = R_beta <- lm(logProduction ~ tod + I(tod^2) + toy + I(toy^2),
                "arma QR fast" = arma_QR_beta_fast <- arma_QR_lm_fast(X,y),
                times = 10)
 ```
-We can now see, the RcppArmadillo version outperforms the R version, however we want to see if this comes at a cost of precision:
+We can now see, the RcppArmadillo version outperforms the R version and produces the same results:
 ```{r}
 arma_QR_beta_fast <- arma_QR_lm_fast(X,y)
 max(abs(arma_QR_beta_fast - R_beta))
-```
-
-### Cholesky Decomposition
-
-**REVISIT??**
-
-```{r, engine='Rcpp', eval = FALSE}
-// [[Rcpp::depends(RcppArmadillo)]]
-
-#include <RcppArmadillo.h>
-using namespace arma;
-
-// [[Rcpp::export]]
-vec arma_cholesky_lm(mat& X, vec& y){
-  
-}
 ```
 
 ## Model Checking
@@ -224,8 +208,8 @@ X_sample <- X[sample_ind,]
 ```
 
 We can now fit $\hat \beta (x_0)$ for each sample data point:
-```{r, cache=TRUE}
-pred_local <- sapply(1:1000, function(ii){
+```{r}
+pred_local <- sapply(1:2000, function(ii){
   lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
 })
 ```
@@ -250,16 +234,27 @@ grid.arrange(local_fitted_plot, local_res_plot, ncol = 2)
 
 ## Using RcppArmadillo
 
-We now want to implement the above with RcppArmadillo in the hopes of speeding this up 
+We now want to implement the above with RcppArmadillo in the hopes of speeding this up, using our previously defined `arma_QR_lm_fast()` function and a multivariate `dmvnInt()` function analagous to `dmvnorm()` R function
 
-```{r, engine='Rcpp'}
+```{r, engine='Rcpp', include = FALSE}
 // [[Rcpp::depends(RcppArmadillo, RcppDist)]]
 
 #include <RcppArmadillo.h>
 #include <mvnorm.h>
 using namespace arma;
 
-vec dmvnInt(mat & X, vec & mu, mat & L)
+vec arma_QR_lm_fast(const mat X, const vec y){
+  mat Q;
+  mat R;
+  
+  qr_econ(Q, R, X);
+  vec Qty = trans(Q) * y;
+  
+  vec beta = solve(R, Qty);
+  return beta;
+}
+
+vec dmvnInt(const mat X, const rowvec mu, const mat L)
 {
   
   unsigned int d = X.n_cols;
@@ -287,36 +282,56 @@ vec dmvnInt(mat & X, vec & mu, mat & L)
   return out;
 }
 // [[Rcpp::export]]
-vec arma_lm_local(vec& y, vec& x0,  vec& X0, mat& x, mat& X, mat& H){
+vec arma_lm_local(vec& y, mat& x0,  mat& X0, mat& x, mat& X, mat& H){
   
   mat L = chol(H, "lower");
+  int row = x0.n_rows;
   
-  vec w = dmvnInt(x, x0, L);
+  vec fitted(row), w;
+  double fit;
   
-  mat W = diagmat(sqrt(w));
   
-  mat new_X = W * X;
-  vec new_y = W * y;
+  for (int i=0; i<row; i++) {
   
-  mat Q, R;
+    w = sqrt(dmvnInt(x, x0.row(i), L));
+    fit = as_scalar(X0.row(i) * arma_QR_lm_fast(X.each_col() % w, y % w));
+    fitted(i) = fit;
+  }
   
-  qr_econ(Q, R, new_X);
-  vec Qty = trans(Q) * new_y;
-  
-  vec beta = solve(R, Qty);
-  
-  return trans(X0) * beta;
+  return fitted;
   
 }
 
 ```
+```{r, engine ='Rcpp', eval = FALSE}
+// [[Rcpp::export]]
+vec arma_lm_local(vec& y, mat& x0,  mat& X0, mat& x, mat& X, mat& H){
+  
+  mat L = chol(H, "lower");
+  int row = x0.n_rows;
+  
+  vec fitted(row), w;
+  double fit;
+  
+  
+  for (int i=0; i<row; i++) {
+  
+    w = sqrt(dmvnInt(x, x0.row(i), L));
+    fit = as_scalar(X0.row(i) * arma_QR_lm_fast(X.each_col() % w, y % w));
+    fitted(i) = fit;
+  }
+  
+  return fitted;
+  
+}
+```
+
 
 We can now run this for our sample as before and check our results are consistent:
 
-```{r, cache=TRUE}
-arma_pred_local <- sapply(1:1000, function(ii){
-  arma_lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
-})
+```{r}
+
+arma_pred_local <- arma_lm_local(y = y, x0 = x_sample, X0 = X_sample, x = x, X = X, H = diag(c(1, 0.1)^2))
 max(abs(arma_pred_local - pred_local))
 ```
 
@@ -325,8 +340,6 @@ We can now compare the running times of our functions:
 microbenchmark(R = pred_local <- sapply(1:1000, function(ii){
                      lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
                     }),
-               "arma"= arma_pred_local <- sapply(1:1000, function(ii){
-                        arma_lm_local(y = y, x0 = x_sample[ii, ], X0 = X_sample[ii, ], x = x, X = X, H = diag(c(1, 0.1)^2))
-                      }),
-               times = 1)
+               "arma"= arma_lm_local(y = y, x0 = x_sample, X0 = X_sample, x = x, X = X, H = diag(c(1, 0.1)^2)))
 ```
+# Choosing H

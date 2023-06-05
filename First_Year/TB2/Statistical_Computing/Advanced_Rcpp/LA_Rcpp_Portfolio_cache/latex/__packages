@@ -3,3 +3,5 @@ viridisLite
 viridis
 dplyr
 microbenchmark
+gridExtra
+mvtnorm
