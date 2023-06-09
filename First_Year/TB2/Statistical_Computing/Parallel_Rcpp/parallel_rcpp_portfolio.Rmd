@@ -14,10 +14,9 @@ knitr::opts_chunk$set(echo = TRUE)
 For this portfolio we consider the `electBook` dataset on Irish smart meters:
 ```{r}
 library(electBook)
-library(kableExtra)
+
 data("Irish")
-summary(Irish) %>%
-  kable()
+summary(Irish) 
 ```
 
 We concatenate the household demand into a vector - as there are a huge number of observations, we only plot a sub sample of the data:
@@ -36,7 +35,7 @@ ss <- sample(1:n, 1e4)
 plot(x[ss], y[ss], col = "grey")
 ```
 ## Modelling Demand
-We consider modelling the demand as a function of the time of day. Our first model is a simple linear regression $ \mathbb{E} (y|x) = \beta x$, which we fit using least squares:
+We consider modelling the demand as a function of the time of day. Our first model is a simple linear regression $\mathbb{E} (y|x) = \beta x$, which we fit using least squares:
 
 
 ```{r}
@@ -44,7 +43,7 @@ reg1D <- function(y, x){
   
   b <- t(x) %*% y / (t(x) %*% x)  
   
-  return(b)
+  return(as.vector(b))
   
 }
 ```
@@ -56,18 +55,46 @@ system.time( lm(y ~ -1 + x)$coeff )[3]
 system.time( reg1D(y, x) )[3]
 ```
 
-We can see our function has a much faster implementation, however we can still attempt to improve this by parallelising the code in Rcpp 
+We can see our function has a much faster implementation, however we can still attempt to improve this by parallelising the code in Rcpp using OpenMP
 ```{r, engine='Rcpp'}
+
 #include <Rcpp.h>
-#include <RcppParallel.h>
+#include <omp.h>
 using namespace Rcpp;
 
-// [[Rcpp::depends(RcppParallel)]]
 // [[Rcpp::plugins(openmp)]]
-
 // [[Rcpp::export]]
-int reg1D_RcppParallel(NumericVector y, NumericVector x){
-  
+double reg1DParallel(NumericVector y, NumericVector x) {
+  int n = y.size();
+  double numerator = 0.0;
+  double denominator = 0.0;
+
+  #pragma omp parallel for reduction(+:numerator, denominator)
+  for (int i = 0; i < n; i++) {
+    numerator += x[i] * y[i];
+    denominator += x[i] * x[i];
+  }
+
+  return numerator / denominator;
 }
+
 ```
+
+We first check the results are the same:
+
+
+```{r}
+all.equal(reg1D(y,x), reg1DParallel(y,x))
+```
+and now compare computational time:
+
+```{r}
+system.time( reg1D(y, x) )[3]
+system.time( reg1DParallel(y, x) )[3]
+```
+We can see this has improved by a factor of 10.
+
+
+
+
 

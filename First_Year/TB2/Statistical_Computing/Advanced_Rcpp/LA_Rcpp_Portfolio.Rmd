@@ -342,4 +342,4 @@ microbenchmark(R = pred_local <- sapply(1:1000, function(ii){
                     }),
                "arma"= arma_lm_local(y = y, x0 = x_sample, X0 = X_sample, x = x, X = X, H = diag(c(1, 0.1)^2)))
 ```
-# Choosing H
+

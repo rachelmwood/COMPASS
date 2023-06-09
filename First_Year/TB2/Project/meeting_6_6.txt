@@ -1,0 +1,13 @@
+Use ROC curves
+
+set up pipeline to rank test statistics
+
+produce ROC curve for each method in different situations
+
+simulation study of which methods work for which anomalies
+
+relatively sophisticated case study to find poor perfomance
+
+Look at Dan's code
+
+

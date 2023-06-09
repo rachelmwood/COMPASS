@@ -68,7 +68,7 @@ scaled_UASE <- lapply(scaled, function(sim){UASE(original, sim)})
 
 ## Mixture
 
-```{r, eval = FALSE}
+```{r}
 mixed <- mixCoalescent(original, fraction = 1)
 mixture <- mixed$edges
 

@@ -388,7 +388,7 @@ NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, co
 
 We now check these two functions produce the same values:
 
-```{r, eval=FALSE}
+```{r}
 muSmoothAdapt_Rcpp <- mean_var_KRS_Rcpp( y, x, xnew, 0.06)
 max(abs(muSmoothAdapt - muSmoothAdapt_Rcpp))
 

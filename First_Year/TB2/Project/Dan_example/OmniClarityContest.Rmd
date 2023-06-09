@@ -1,0 +1,344 @@
+---
+title: "Clarity Omni Simulation"
+author: "Daniel Lawson"
+date: "3/18/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+If we simulate data in which the graph is distrubted the same in both cases, except for outliers:
+
+* Omni can find the correct outliers, but is sensitive to the correct choice of dimension due to the curse of dimensionality
+* Clarity can find the correct outliers too, though it may have a little less power. It is not especially sensitive to choices.
+
+If we simulate data in which the graph structure is the same, but the components change their relationship, then:
+
+* Omni still has power to detect outliers, but it is reduced
+* Clarity is robust to this sort of change, and only loses a bit of power.
+
+## Prerequisites
+
+Installing packages if necessary:
+```{r}
+if(FALSE){ # Disabled for making a nice script
+  library("devtools")
+  install_github("neurodata/graphstats")
+  install_github("danjlawson/CLARITY/ClaritySim")
+  install_github("danjlawson/CLARITY/Clarity")
+}
+```
+
+Loading packages for use below:
+```{r}
+library("Clarity")
+library("ClaritySim")
+library("dplyr")
+library("graphstats")
+```
+
+## Simulate data that will be good to Clarity
+
+Here we simulate data under a tree model. The parameters are N, and the number of objects to sample; K, the number of classes. There are also some modelling choices such as how many objects to sample of each class. Here we have the same number of all classes. There are K+1 classes being simulated, because we are going to use the additional class as a different direction for "badness".
+
+`simulateCoalescent` generates an ultramentric tree, whereas `transformCoalescent` generates non-ultrametric trees. Simulating like this ensures that Y1 and Y2 are going to be exchangeable.
+
+`multmin` and `multmax` allow us to force the clusters to have different relationships in the two datasets, whilst sharing the same "structure" in the Clarity model. 
+
+I'm going to make two classes of data: **Easy** in which the Y1 and Y2 are generated from the same model (except where the data are bad) and **Hard** where they are generated with the same structure but different relationships.
+
+We'll work with the similarities to start with (since neither method cares whether we use a graph or similarities). Afterwards I generate a graph with the same structure, for comparison purposes.
+```{r}
+generateData=function(N,K,multmin=1,multmax=1,
+                      sigma0=0.5,tipdist=0.1,seed=NULL) {
+  if(!is.null(seed))set.seed(seed)
+  mysim=simulateCoalescent(N*(K+1)/K,K+1,
+                           alpha=rep(0,K+1),
+                           sigma0=sigma0,Amodel="uniform",tipdist=tipdist)
+  mysim1=transformCoalescent(mysim,multmin=multmin,multmax=multmax)
+  mysim2=transformCoalescent(mysim,multmin=multmin,multmax=multmax)
+  list(s1=mysim1,s2=mysim2)
+}
+N=600; K=12
+sim0=generateData(N,K,seed=1)
+sim1=generateData(N,K,0.1,10,seed=1)
+```
+
+### Understanding the ClaritySim model
+
+ClaritySim generates a distance matrix X between the K tips of a tree. The tree describes the distances between tips. Each of the N objects is described as a mixture matrix A between the clusters. Here we are restricting to complete membership, i.e. one of each row of A is 1. The data $Y=A X A^T+ noise$. (The noise is IID with $\sigma=\sigma_0$ as specified above.)
+
+In this example the random tree was:
+```{r}
+par(mfrow=c(1,3))
+plot(sim0$s1$tree,main="Easy both trees")
+plot(sim1$s1$tree,main="Hard tree1")
+plot(sim1$s2$tree,main="Hard tree2")
+```
+The A matrix was (in all cases)
+```{r}
+image(1:(K+1),1:(N*(K+1)/K),sim0$s1$A %>% t,xlab="Cluster",ylab="Object ID")
+```
+The data take the following form (including the "bad" direction):
+```{r}
+par(mfrow=c(1,3))
+-log10(sim0$s1$Y) %>% image(main="Easy Data")
+-log10(sim1$s1$Y) %>% image(main="Hard Data1")
+-log10(sim1$s2$Y) %>% image(main="Hard Data2")
+```
+
+## Make anomolous nodes
+
+We will select some nodes to be "bad", and record good/bad as a class identifier. We'll make the same nodes bad in every case.
+```{r}
+set.seed(1)
+nbad=25
+indexbad=sample(N,nbad) %>% sort
+myclass=rep(1,N)
+myclass[indexbad]=2
+```
+
+Now we have to make the bad nodes as such. Here I chose to mix each bad node with a random node from the two "bad clusters", which are different in each of the two datasets. We will use a proportion `badmix` from the original data, and a proportion `1-badmix` from the bad cluster. 
+
+The `badmix` parameter hence describes "how far apart" the two new cluster are, but the positions of the nodes are not simple as they share their locations through the original clusters. It is the critical parameter in making the problem "hard": set it to 1 and the new data are in a totally new cluster. Set it to 0 and they are indistinguishable from the old cluster.
+
+```{r}
+makeBad=function(mysim,N,K,indexbad,badmix,seed=NULL){
+  if(!is.null(seed)) set.seed(1)
+  ## Make the individual data
+  Y1=mysim$s1$Y[1:N,1:N]
+  Y2=mysim$s2$Y[1:N,1:N]
+  for(i in indexbad){
+      badind2=N+sample(1:(N/K),1)
+      Y2[i,] = (1-badmix)*Y2[i,] + badmix*mysim$s1$Y[badind2,1:N]
+      Y2[,i] = (1-badmix)*Y2[,i] + badmix*mysim$s1$Y[1:N,badind2]
+      diag(Y1)=diag(Y2)=0
+  }
+  return(list(Y1=Y1,Y2=Y2))
+}
+badmix=0.25
+data0=makeBad(sim0,N,K,indexbad,badmix=badmix,seed=1)
+data1=makeBad(sim1,N,K,indexbad,badmix=badmix,seed=1)
+```
+
+To recap: `Y1` and `Y2` are now our data matrices; they are "the same" in terms of structure. The settings about keep the "good" nodes the same in terms of the relationship as well. `myclass` tells us who was bad.
+
+## Omni embedding
+
+We can now perform omni embedding:
+
+```{r}
+doOmni=function(data){
+  omni=gs.omni(data$Y1,data$Y2)
+  svd(omni)
+}
+omni0=doOmni(data0)
+omni1=doOmni(data1)
+```
+
+Visualisation:
+```{r}
+pcplot=function(omni,pcs,myclass=1,cols=c("red","orange","blue","cyan"),main="",pch=1:4,...){
+  N=dim(omni$u)[1]/2
+  to=order(myclass)
+  plot(omni$u[to,pcs],type="n",xlab=paste0("PC",pcs[1]),ylab=paste0("PC",pcs[2]),main=main,...)
+  points(omni$u[(1:N)[myclass==1],pcs],col=cols[1],pch=pch[1])
+  points(omni$u[N+(1:N)[myclass==1],pcs],col=cols[3],pch=pch[3])
+  points(omni$u[(1:N)[myclass==2],pcs],col=cols[2],pch=pch[2])
+  points(omni$u[N+(1:N)[myclass==2],pcs],col=cols[4],pch=pch[4])
+}
+pcs=c(1,2)
+cols=c("red","orange","blue","cyan")
+par(mfrow=c(1,2))
+pcplot(omni0,pcs,myclass,cols=cols,main="Omni (Easy data)")
+legend("topright",legend=c("U1 (good)","U1 (bad)","U2 (good)","U2 (bad)"), 
+       text.col=cols,col=cols,pch=c(1,2,1,2))
+pcplot(omni1,pcs,myclass,main="Omni (Hard data)")
+```
+The "bad" data are orange/cyan; the first dataset is red/orange and the second is blue/cyan. The omni represenentation pulls the bad points (both red and cyan) towards the centre. The red and blue points move in the hard dataset, although not by that much. The "bad" points at the top are quite stationary, presumably because they are pulled towards a very similar cluster.
+
+Omni is very sensitive to the choice of $K$ for the embedding. If we use $K=2$ the job is very easy because all of the action for the bad points is in that PC. If we use more, then the noise for the other points messes things up.
+
+```{r}
+evaluateScores=function(scores,truth){ ## General function, discrimination of bad vs good. Something based on AUC would be better.
+  mean(scores[truth==2])/mean(scores[truth==1])
+}
+scoreFunctionOmni=function(osvd,Kdist){ # How to score the omni at a particular K
+  N=dim(osvd$u)[1]/2
+  resids=osvd$u[(1:N),1:Kdist,drop=FALSE] - osvd$u[N+(1:N),1:Kdist,drop=FALSE]
+  rowSums(resids^2) %>% sqrt
+}
+scanOmni=function(omni,myclass,kmax=20){ # Score the omni for a range of K
+  scan0=1:kmax %>% sapply(function(x){scoreFunctionOmni(omni,x)})
+  apply(scan0,2,evaluateScores,truth=myclass)
+}
+par(mfrow=c(1,2))
+plot(1:20,scanOmni(omni0,myclass))
+plot(1:20,scanOmni(omni1,myclass))
+```
+
+```{r}
+dsmall=2; dlarge=10
+distdata0omnismall=scoreFunctionOmni(omni0,dsmall)
+distdata0omnilarge=scoreFunctionOmni(omni0,dlarge)
+distdata1omnismall=scoreFunctionOmni(omni1,dsmall)
+distdata1omnilarge=scoreFunctionOmni(omni1,dlarge)
+
+par(mfrow=c(2,2))
+plot(distdata0omnismall,col=myclass,main="Omni, Easy Data, few distances")
+plot(distdata0omnilarge,col=myclass,main="Omni, Easy Data, many distances")
+plot(distdata1omnismall,col=myclass,main="Omni, Hard Data, few distances")
+plot(distdata1omnilarge,col=myclass,main="Omni, Hard Data, many distances")
+```
+
+## Regression embedding
+
+Now we use Clarity regression after embedding. Here we are Learning $Y_1=A X_1 A^T$ for $dim(A)[2]=1,\cdots,K_{regression}$. We then predict $Y_2 = A X_2 A^T$, i.e. using the same $A$. And do the same thing in reverse.
+
+```{r}
+doClarity=function(Y1,Y2,Kregression=20) {
+  s1=Clarity_Scan(Y1,Kregression,verbose=FALSE)
+  p21=Clarity_Predict(Y2,s1)
+  s2=Clarity_Scan(Y2,Kregression,verbose=FALSE)
+  p12=Clarity_Predict(Y1,s2)
+  list(s1=s1,p21=p21,s2=s2,p12=p12)
+}
+clarity0=doClarity(data0$Y1,data0$Y2)
+clarity1=doClarity(data1$Y1,data1$Y2)
+```
+
+Now we have to define a distance function. My "default" thing to try is to use "many PCs" and see what residual structure remains afterwards. I don't have any theory suggesting what to do. Two options seem reasonable: the first is simply the prediction error on `d2` and the second is `score2=|d21-d2|`, i.e. the prediction error relative to how well we would have predicted this object if we had learned it. However, the first of these is rather conservative so I favour the second.
+
+It is "fair" to add the reverse residuals (This isn't that important in practice, it does decrease statistical noise though).
+
+Creating scores-vs-truth for Clarity using the same function we used for Omni:
+
+```{r}
+scoreResidualsOnly=function(clarity,Kregression=NULL){ # This is rubbish, so I don't report it
+  if(is.null(Kregression)) Kregression=length(clarity$p21$scan)
+  (rowSums(clarity$p21$scan[[Kregression]]$Yresid^2) %>% sqrt) + (rowSums(clarity$p12$scan[[Kregression]]$Yresid^2) %>% sqrt)
+}
+scoreRelativeResiduals=function(clarity,Kregression=NULL){
+  if(is.null(Kregression)) Kregression=length(clarity$p21$scan)
+  d1=(rowSums(clarity$s1$scan[[Kregression]]$Yresid^2) %>% sqrt) 
+  d12=(rowSums(clarity$p12$scan[[Kregression]]$Yresid^2) %>% sqrt) 
+  d2=(rowSums(clarity$s2$scan[[Kregression]]$Yresid^2) %>% sqrt) 
+  d21=(rowSums(clarity$p21$scan[[Kregression]]$Yresid^2) %>% sqrt) 
+  (d21-d2)^2 %>% sqrt + (d21-d1)^2 %>% sqrt
+}
+scanResidualScores=function(clarity,myclass,kmax=NULL){
+  if(is.null(kmax)) kmax=clarity$s1$kmax
+  res=sapply(1:kmax,scoreRelativeResiduals,clarity=clarity)
+  apply(res,2,evaluateScores,truth=myclass)
+}
+par(mfrow=c(1,2))
+plot(scanResidualScores(clarity0,myclass),ylim=c(0,10),type="l",xlab="K",ylab="Classification Score",main="Easy Data")
+lines(scanOmni(omni0,myclass,),col=2)
+plot(scanResidualScores(clarity1,myclass),ylim=c(0,5),type="l",xlab="K",ylab="Classification Score",main="Hard Data")
+lines(scanOmni(omni1,myclass),col=2)
+legend("topright",legend = c("Clarity","Omni"),col=1:2,text.col=1:2,lty=1)
+```
+Clarity does best for small $K$, just like the omni; but the dropoff is differently structured and seems to require less fine-tuning.
+
+```{r}
+csmall=2; clarge=10
+distdata0claritysmall=scoreRelativeResiduals(clarity0,csmall)
+distdata1claritysmall=scoreRelativeResiduals(clarity1,csmall)
+distdata0claritylarge=scoreRelativeResiduals(clarity0,clarge)
+distdata1claritylarge=scoreRelativeResiduals(clarity1,clarge)
+```
+
+At last, the scoring:
+```{r}
+par(mfrow=c(2,2))
+plot(distdata0claritysmall,col=myclass,main="Clarity (Easy Data, small K)")
+plot(distdata1claritysmall,col=myclass,main="Clarity (Hard Data, small K)")
+plot(distdata0claritylarge,col=myclass,main="Clarity (Easy Data, large K)")
+plot(distdata1claritylarge,col=myclass,main="Clarity (Hard Data, large K)")
+```
+
+Interestingly the methods seem to perform differently on different examples. Omni is best for some clusters and fails completely on others.
+
+## Graph tranalation
+
+This is all regarding similarity matrices. In case you worry the results are not relevent to graphs, here is a translation.
+
+An important choice has to be made about how to translate these Y's into usable objects.
+```{r}
+rdpg.sample=function(X=NULL,P=NULL, p=NULL){ # adapted from the "graphstats" package
+    ## Make a random dot product graph from locations X
+    ## Optionally, set the rate of edges to p
+    if(is.null(P))P <- X %*% t(X)
+    diag(P)=0
+    P[P<0]=0
+    if(!is.null(p)){
+        P=P*p/(P[col(P) > row(P)] %>% mean)
+    }
+    n <- nrow(P)
+    U <- matrix(0, nrow = n, ncol = n)
+    U[col(U) > row(U)] <- runif(n * (n - 1)/2)
+    U <- (U + t(U))
+    diag(U) <- runif(n)
+    A <- (U < P) + 0
+    diag(A) <- 0
+    A
+}
+similarity2intensity=function(x,lambda=5){
+  exp(-lambda*x)
+}
+similarity2rdpg=function(x,p=0.2,lambda=5,seed=1){
+  if(!is.null(seed)) set.seed(seed)
+  x%>% similarity2intensity(lambda=lambda) %>% rdpg.sample(p=p)
+}
+set.seed(1)
+
+graphs0=lapply(data0,similarity2rdpg)
+graphs1=lapply(data1,similarity2rdpg)
+```
+
+Examine the graphs
+```{r}
+par(mfrow=c(1,3))
+image(graphs0$Y1)
+image(graphs1$Y1)
+image(graphs1$Y2)
+```
+
+Now we'll do the inference exactly as above:
+```{r}
+graphomni0=doOmni(graphs0)
+graphomni1=doOmni(graphs1)
+graphclarity0=doClarity(graphs0$Y1,graphs0$Y2)
+graphclarity1=doClarity(graphs1$Y1,graphs1$Y2)
+```
+And examine the performance
+```{r}
+par(mfrow=c(1,2))
+plot(scanResidualScores(graphclarity0,myclass),ylim=c(0,22),type="l",xlab="K",ylab="Classification Score",main="Easy Graph Data")
+lines(scanOmni(graphomni0,myclass),col=2)
+plot(scanResidualScores(graphclarity1,myclass),ylim=c(0,22),type="l",xlab="K",ylab="Classification Score",main="Hard Graph Data")
+lines(scanOmni(graphomni1,myclass),col=2)
+legend("topright",legend = c("Clarity","Omni"),col=1:2,text.col=1:2,lty=1)
+```
+
+That is quite surprising to me. What is going on? We'll use the best case K for Omni and K=10 for Clarity.
+```{r}
+claritygraphk=10
+omnigraphk=2
+distdata0claritylarge=scoreRelativeResiduals(graphclarity0,claritygraphk)
+distdata1claritylarge=scoreRelativeResiduals(graphclarity1,claritygraphk)
+distdata0omnilarge=scoreFunctionOmni(graphomni0,omnigraphk)
+distdata1omnilarge=scoreFunctionOmni(graphomni1,omnigraphk)
+
+par(mfrow=c(2,2))
+plot(distdata0claritylarge,col=myclass,main="Clarity (Easy Graph Data)")
+plot(distdata1claritylarge,col=myclass,main="Clarity (Hard Graph Data)")
+plot(distdata0omnilarge,col=myclass,main="Omni (Easy Graph Data)")
+plot(distdata1omnilarge,col=myclass,main="Omni (Hard Graph Data)")
+```
+
+It would seem that the lower levels of data in the graph has damaged the omni method. Two things are happening: firstly, even in the "Easy" data, the graph is skewed by the presence of the outliers (otherwise the Omni assumption holds.) Secondly in the hard dataset, the skew in the "bad" data is of the same magnitude as the skew of the clusters.
