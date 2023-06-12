@@ -3,10 +3,10 @@ title: "Rcpp Portfolio"
 author: "Rachel Wood"
 date: "2023-03-27"
 output:
-  html_document:
-    df_print: paged
   pdf_document: 
     highlight: tango
+  html_document:
+    df_print: paged
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{fvextra}
@@ -195,9 +195,8 @@ ggplot() +
             color = "mediumorchid3", linewidth = 0.7)
 ```
 
-We now write the equivalent function in Rcpp: 
+We now write the equivalent function in Rcpp using the `roptim` package:
 
-\textbf{REVISIT}
 ```{r, engine='Rcpp'}
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(roptim)]]
@@ -216,23 +215,15 @@ using namespace arma;
 using namespace roptim;
 
 
-NumericVector meanKRS_Rcpp_I(const NumericVector x, const NumericVector y, const NumericVector xnew, const double lambda) {
+double mse_lambda(const double lambda, const NumericVector x,const NumericVector y,const NumericVector xnew, const NumericVector y_new){
   int n = x.size();
   int nnew = xnew.size();
   
-  NumericVector mu(nnew);
+  NumericVector fitted(nnew);
   
   for (int i = 0; i < nnew; i++){
-    mu[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
+    fitted[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
   }
-  
-  return mu;
-}
-
-double mse_lambda(const double lambda, const NumericVector x,const NumericVector y,const NumericVector x_new, const NumericVector y_new){
-  
-  
-  NumericVector fitted = meanKRS_Rcpp_I(x, y, x_new, lambda);
   return sum(pow(fitted - y_new, 2));
 }
 
@@ -243,7 +234,7 @@ NumericVector x_train, y_train, y_test, x_test;
 // [[Rcpp::export]]
 
 
-NumericVector lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const NumericVector groups) {
+double lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const NumericVector groups) {
   
     int n = x.size();
  
@@ -252,19 +243,18 @@ NumericVector lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const
     NumericVector lambdas(nfolds);
     NumericVector mse(nfolds);
  
-    for (int i =1; i <= nfolds; i++){
-        x_train = x[groups != i];
-        y_train = y[groups != i];
+    for (int i =0; i < nfolds; i++){
+        x_train = x[groups != (i+1)];
+        y_train = y[groups != (i+1)];
     
-        x_test = x[groups == i];
-        y_test = y[groups == i];
+        x_test = x[groups == (i+1)];
+        y_test = y[groups == (i+1)];
      
     
     class Mse : public Functor {
       public:
       double operator()(const arma::vec& log_lambda) override {
         double lambda = exp(log_lambda[0]);
-        // std::function<double(const double log_lambda)> mse = { mse_lambda(log_lambda, x_train, y_train, x_test, y_test)};
         return  mse_lambda(lambda, x_train, y_train, x_test, y_test);
       }
     };
@@ -277,25 +267,31 @@ NumericVector lambda_cv_Rcpp(const NumericVector x, const NumericVector y, const
     
     
     arma::vec par = opt.par();
-    lambdas[i] = par[0];
+    lambdas[i] = exp(par[0]);
     mse[i] = opt.value();
     
   }
   
   int min_ind = which_min(mse);
   
-  return lambdas;
+  return lambdas[min_ind];
   
 }
 
 
 
 ```
-
+We now verify that this is consistent with our R result
 ```{r}
-hat_lambda <- lambda_cv_Rcpp(x, y, groups)
+Rcpp_hat_lambda <- lambda_cv_Rcpp(x, y, groups)
+abs(hat_lambda - Rcpp_hat_lambda)
 ```
-
+We can now compare the computational times:
+```{r}
+microbenchmark("R" = lambda_cv(x, y, groups),
+               "Rcpp" = lambda_cv_Rcpp(x, y, groups))
+```
+The results above show the function has been sped up by a factor of 2.
 
 ## Lambda as a function of x
 
@@ -337,9 +333,9 @@ mean_var_KRS <- function(y, x, xnew, lambda){
 }
 ```
 
-This gives us the result:
+and we use our cross-validated value of lambda to get:
 ```{r}
-muSmoothAdapt <- mean_var_KRS( y, x, xnew, 0.06)
+muSmoothAdapt <- mean_var_KRS( y, x, xnew, hat_lambda)
 adapt_data <- tibble(xnew = xnew, fitted = muSmoothAdapt)
 ggplot() +
   geom_point(data = data, aes(x, y), size = 0.8) +
@@ -364,8 +360,8 @@ NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, co
   NumericVector out(nnew);
   NumericVector madHat(nnew);
   
-  for (int i = 0; i < nnew; i++){
-    mu[i] = sum(dnorm(x,xnew[i], lambda)*y)/ sum(dnorm(x,xnew[i], lambda));
+  for (int i = 0; i < n; i++){
+    mu[i] = sum(dnorm(x,x[i], lambda)*y)/ sum(dnorm(x, x[i], lambda));
   }
   
   NumericVector resAbs = abs(y-mu);
@@ -373,12 +369,11 @@ NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, co
   for (int i =0; i < nnew; i++){
     madHat[i] = sum(dnorm(x,xnew[i], lambda)*resAbs)/sum(dnorm(x,xnew[i], lambda));
   }
-  return madHat;
   NumericVector w = 1/madHat;
   w = w/mean(w);
   
   for (int i =0; i <nnew; i++){
-    out[i] <- sum(dnorm(x, xnew[i], lambda * w[i])*y) / sum(dnorm(x, xnew[i], lambda *w[i]));
+    out[i] = sum(dnorm(x, xnew[i], lambda * w[i])*y) / sum(dnorm(x, xnew[i], lambda *w[i]));
   }
   
   return out;
@@ -389,8 +384,13 @@ NumericVector mean_var_KRS_Rcpp(const NumericVector y, const NumericVector x, co
 We now check these two functions produce the same values:
 
 ```{r}
-muSmoothAdapt_Rcpp <- mean_var_KRS_Rcpp( y, x, xnew, 0.06)
+muSmoothAdapt_Rcpp <- mean_var_KRS_Rcpp( y, x, xnew, hat_lambda)
 max(abs(muSmoothAdapt - muSmoothAdapt_Rcpp))
+```
 
+Comparing the time gain from this we seethe Rcpp version has about half of the computing time:
+```{r}
+microbenchmark("R" = mean_var_KRS(x, y, xnew, lambda = hat_lambda),
+               "Rcpp" = mean_var_KRS_Rcpp(x, y, xnew, lambda = hat_lambda))
 ```
 
