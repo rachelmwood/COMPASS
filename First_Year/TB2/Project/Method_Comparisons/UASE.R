@@ -2,13 +2,10 @@ require(ggplot2)
 require(dplyr)
 require(gridExtra)
 
-UASE <- function(sim1, sim2,d = 2){
-  Y<- cbind(sim1$Y, sim2$Y)
+UASE <- function(similarity, d = 2, population){
   
-  svd <- svd(Y)
+  svd <- svd(similarity)
   
-  A <- sim1$A
-  population <- A %*% 1:ncol(A)
   
   
   U <- svd$u %*% diag(sqrt(svd$d))
@@ -17,8 +14,8 @@ UASE <- function(sim1, sim2,d = 2){
   d_char <- as.character(1:d)
   colnames(left) <- c(d_char, "population")
   
-  t <- rep(1:2, each = nrow(A))
-  index <- rep(1:nrow(A),2)
+  t <- rep(1:2, each = nrow(similarity))
+  index <- rep(1:nrow(similarity),2)
   V <- svd$v %*% diag(sqrt(svd$d))
   V <- V[,1:d]
   right <- as.data.frame(cbind(V,as.factor(t), 
@@ -27,10 +24,10 @@ UASE <- function(sim1, sim2,d = 2){
   
   colnames(right) <- c(d_char," discipline", "population", "observation")
   
-  return(list(left = left, right = right))
+  return(list(left = left, right = right, eigenvals = svd$d[1:d]))
 }
 
-plot_UASE <- function(UASE){
+plot_UASE <- function(UASE, d = 2){
   
   U <- UASE$left %>%
     as_tibble() %>%
@@ -71,11 +68,26 @@ plot_UASE <- function(UASE){
   grid.arrange(V1_plot, V2_plot, U_plot, layout_matrix = lay)
 }
 
-distance_moved <- function(UASE){
-  V <- UASE$right %>%
-    as_tibble()
+distance_moved <- function(V, d, scale=TRUE, eigenvals = NULL){
+  
+  if(scale){
+    V[,1:d] <-as.matrix(V[,1:d]) %*% diag(as.vector(sqrt(eigenvals[1:d])), nrow = d)
+  }
+  V <- V %>% as_tibble()
+  
   n <- nrow(V) 
   
+  V1 <- V[1:(n/2),1:d]
+  V2 <- V[(n/2 +1):n, 1:d]
+  moved <- sapply(1:(n/2), FUN = function(i){
+    dist(rbind(V1[i,], V2[i,]))
+  })
   
-  joined <- cbind()
+  return(moved)
+}
+
+plot_distances <- function(UASE, d){
+  distances <- apply(as.matrix(1:d, nrow = 1), MARGIN = 1, FUN = function(ii){
+    distance_moved(mixed_UASE, d = ii)
+  })
 }

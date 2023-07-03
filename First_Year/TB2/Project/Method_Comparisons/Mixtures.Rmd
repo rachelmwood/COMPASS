@@ -1,0 +1,214 @@
+---
+title: "Comparing CLARITY, Omnibus Embedding and UASE"
+author: "Rachel Wood"
+date: "2023-03-31"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+
+library(ggplot2)
+theme_set(theme_bw())
+knitr::opts_knit$set(dev = 'pdf',
+              pdf.options(encoding = "ISOLatin9.enc"),
+              message = FALSE,
+              warning = FALSE,
+              tidy.opts = list(width.cutoff=50), tidy=TRUE,
+              fig.pos ="H", out.width = '60%',
+              fig.align = 'center'
+              )
+
+scale_fill_continuous <- function(...){
+  scale_fill_distiller(palette = "PuRd", ...)
+}
+```
+
+# Data generation
+
+We use the `ClaritySim` package to create the `original' data generated according to some tree structure, which we will then scale and add a mixture to:
+
+```{r datgen}
+library(ClaritySim)
+set.seed(124)
+n <- 100 
+k <- 10
+l <- 100
+original <- simulateCoalescent(n,k,l,
+                         sigma0=0.2,
+                         sigma = 0.5,
+                         Amodel="uniform",
+                         alpha=0,
+                         minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
+plot(original$tree)
+
+original_similar <- expand.grid(Subjects = as.factor(1:100), Subject = as.factor(1:100))
+original_similar$values <- c(original$Y)
+
+original_sim_plot <- ggplot(data = original_similar, aes(x = Subjects, y = Subject)) +
+  geom_tile(aes(fill = values)) +
+  theme(legend.position = "none", panel.border = element_rect(linewidth = 10)) +
+   theme_void() + coord_fixed()
+```
+
+
+```{r mixdatagen}
+mixed <- mixCoalescent(original, fraction = 1, transform = TRUE)
+mixture <- mixed$edges
+
+mixed_similar <- expand.grid(Subjects = as.factor(1:100), Subject = as.factor(1:100))
+mixed_similar$values <- c(mixed$Y)
+
+mix_sim_plot <- ggplot(data = mixed_similar, aes(x = Subjects, y = Subject)) +
+  geom_tile(aes(fill = values)) +
+  theme(legend.position = "none", panel.border = element_rect(linewidth = 10)) + 
+  theme_void() + coord_fixed()
+
+```
+
+
+```{r treeplots}
+library(ape)
+
+par(mfrow = c(1,2))
+plot(original$tree)
+plot(mixed$tree)
+edges(mixture[1], mixture[2], arrows = 1)
+```
+```{r sim plots}
+library(gridExtra)
+grid.arrange(original_sim_plot, mix_sim_plot, nrow = 1)
+```
+
+# UASE
+Perform UASE and use the eigenvalues to choose how many components to consider:
+
+```{r}
+source("UASE.R")
+groups <- original$A %*% 1:ncol(original$A)
+
+similarity <- cbind(original$Y, mixed$Y)
+mix_UASE <- UASE(similarity, d = 12, groups)
+
+scree_dat <- tibble("Index" = as.integer(1:12), "Variance" = mix_UASE$eigenvals/sum(mix_UASE$eigenvals))
+ggplot(data = scree_dat, aes(Index, Variance)) +
+  geom_point(colour = "steelblue3") +
+  geom_line(colour = "steelblue3") +
+  labs(y = "Proportion of Variance")
+  
+  
+```
+
+```{r}
+plot_UASE(mix_UASE)
+```
+
+
+
+
+```{r}
+source("distances.R")
+library(hrbrthemes)
+
+distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
+  distance_moved(mix_UASE$right, d = ii, scale = FALSE)
+})
+
+distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances))
+distance_plot$distances <- c(t(distances))
+
+distance_plot <- as_tibble(distance_plot)
+ggplot(distance_plot, aes(x = Components))+
+  geom_tile(aes(y = Observations, fill = distances)) +
+  scale_fill_distiller(direction = 1) 
+```
+
+
+# On different scales
+
+```{r}
+test<- mixed
+test$Y<- test$Y * 100
+similarity <- cbind(original$Y, test$Y)
+mixed_UASE<-UASE(similarity, d = 12, groups)
+plot_UASE(mixed_UASE)
+```
+```{r}
+
+
+distances_scaled <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
+  distance_moved(mixed_UASE$right, d = ii, l =5,scale = TRUE, eigenvals = mixed_UASE$eigenvals)
+})
+
+scaled_distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances_scaled))
+scaled_distance_plot$distances <- c(t(distances_scaled))
+scaled_distance_plot$groups <- trunc( (scaled_distance_plot$Observations-1)/10) +1
+
+
+scaled_distance_plot <- as_tibble(scaled_distance_plot)
+p_scaled <- ggplot(scaled_distance_plot, aes(x = Components))+
+  geom_tile(aes(y = Observations, fill = distances)) +
+  scale_fill_distiller(direction = 1) +
+  ggtitle("Distances Scaled")
+
+distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
+  distance_moved(mixed_UASE$right, d = ii, scale = FALSE)
+})
+
+distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances))
+distance_plot$distances <- c(t(distances))
+distance_plot$groups <- trunc( (distance_plot$Observations-1)/10) +1
+
+
+distance_plot <- as_tibble(distance_plot)
+p <- ggplot(distance_plot, aes(x = Components))+
+  geom_tile(aes(y = Observations, fill = distances)) +
+  scale_fill_distiller(direction = 1) +
+  ggtitle("Distances not Scaled")
+
+p_scaled
+p
+```
+
+# Omnibus
+
+Use the `graphstats` package to compute omnibus embedding:
+```{r}
+library(graphstats)
+
+omni <- svd(gs.omni(original$Y, mixed$Y))
+```
+
+```{r}
+pcs <- 2
+omni_plot <- omni$u[,1:pcs] %>% as_tibble()
+colnames(omni_plot) <- as.character(1:pcs)
+omni_plot <- cbind( omni_plot,groups = as.factor(groups), discipline = rep(c(1,2), each = nrow(omni_plot)/2))
+
+ggplot(omni_plot, aes(x = `1`, y = `2`)) +
+  geom_point(aes(colour = groups)) +
+  facet_wrap(~discipline) +
+  scale_color_viridis_d(option = "turbo")
+```
+
+```{r}
+distances_omni <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
+  distance_moved(omni$u, d = ii, scale = FALSE, eigenvals = omni$d)
+})
+```
+
+```{r}
+omni_distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances_omni))
+omni_distance_plot$distances <- c(t(distances_omni))
+omni_distance_plot$groups <- trunc( (omni_distance_plot$Observations-1)/10) +1
+
+
+omni_distance_plot <- as_tibble(omni_distance_plot)
+p <- ggplot(omni_distance_plot, aes(x = Components))+
+  geom_tile(aes(y = Observations, fill = distances)) +
+  scale_fill_distiller(direction = 1) 
+
+p
+```
+

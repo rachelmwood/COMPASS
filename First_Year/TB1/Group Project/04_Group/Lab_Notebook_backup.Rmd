@@ -8,6 +8,9 @@ date: "January 2023"
 ---
 
 ```{r setup, include=FALSE}
+scale_fill_continuous <- function(){
+  scale_fill_viridis(option = "plasma", begin = 0.2)
+}
 knitr::opts_chunk$set(echo = TRUE,
                       dev = 'pdf',
                       pdf.options(encoding = "ISOLatin9.enc"),

@@ -47,8 +47,17 @@ anomaly$A <- A
 anomaly <- simData(anomaly)
 source("UASE.R")
 
-anomaly_UASE <-UASE(original, anomaly)
+anomaly_UASE <-UASE(original, anomaly, d = 8)
 plot_UASE(anomaly_UASE)
+
+distances <- apply(as.matrix(1:8, nrow = 1), MARGIN = 1, FUN = function(ii){
+  distance_moved(anomaly_UASE, d = ii)
+})
+distances <- as.data.frame(distances) 
+
+distances <- distances %>% tibble(.name_repair = "minimal")
+colnames(distances) <- paste("dim", as.character(1:8))
+heatmap(distances, Rowv = NA, Colv = NA)
 ```
 
 
@@ -69,34 +78,41 @@ scaled_UASE <- lapply(scaled, function(sim){UASE(original, sim)})
 ## Mixture
 
 ```{r}
-mixed <- mixCoalescent(original, fraction = 1)
+set.seed(2)
+mixed <- mixCoalescent(original, fraction = 1, transform = TRUE)
 mixture <- mixed$edges
 
 library(ape)
-library(glottoTrees)
-
 plot(mixed$tree)
-edges(mixture[2], mixture[1], arrows = 1)
+edges(mixture[1], mixture[2], arrows = 1)
 
 ```
 
-## Swapping node - REVISIT
+```{r}
+test=original
+test$Y=test$Y
+mixed_UASE <-UASE(test, mixed, d = 12)
+plot_UASE(mixed_UASE)
 
-```{r, eval = FALSE}
-tree <- original$tree
-
-newtree <- tree
-newtree$tip.label <-c("t2", "t1", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10")
-
-swapped <- simulateCoalescent(n,k,
-                         sigma0=0.0001,
-                         Amodel="uniform",
-                         alpha=0,
-                         minedge=0.1,
-                         tree = newtree) 
-plot(swapped$tree)
 ```
 
+```{r}
+library(hrbrthemes)
+distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
+  distance_moved(mixed_UASE, d = ii)
+})
+
+distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances))
+distance_plot$distances <- c(t(distances))
+distance_plot$groups <- trunc( (distance_plot$Observations-1)/10) +1
+
+
+distance_plot <- as_tibble(distance_plot)
+ggplot(distance_plot, aes(x = Components))+
+  geom_tile(aes(y = Observations, fill = distances)) +
+  theme_ipsum()+
+  scale_fill_distiller(direction = 1)
+```
 
 # UASE
 
