@@ -134,7 +134,29 @@ similarity <- cbind(original$Y, test$Y)
 mixed_UASE<-UASE(similarity, d = 12, groups)
 plot_UASE(mixed_UASE)
 ```
+
+
 ```{r}
+distances_scaled <- apply(
+  as.matrix(1:12, nrow = 1),
+  MARGIN = 1,
+  FUN = function(ii) {
+    distance_moved(
+      mixed_UASE$right,
+      d = ii, l = 5,
+      scale = TRUE,
+      eigenvals = mixed_UASE$eigenvals)
+})
+distances_scaled
+```
+
+```{r, eval = FALSE}
+p <- plot_distances(distances_scaled, 12)
+p
+```
+
+
+```{r, eval=FALSE, include=FALSE}
 
 
 distances_scaled <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
