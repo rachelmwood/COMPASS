@@ -18,18 +18,17 @@ distance_moved <- function(V, d, l = 2, scale = TRUE, eigenvals = NULL) {
   return(moved)
 }
 
-group_distanes <- function(distances, d, groups) {
-  distances <- expand.grid(
+group_distances <- function(distances, d, groups) {
+  distances_grid <- expand.grid(
     Components = 1:d,
     Observations = 1:nrow(distances))
-  #distances$Groups <- rep(groups, each = 12)
-  distances$Distances <- c(t(distances))
-  return(distances)
-  #distances <- distances %>%
-  #  as_tibble() %>%
-  #  group_by(Groups, Components) %>%
-  #  summarise(Distances = mean(Distances))
-  return(distances)
+  distances_grid$Group <- as.factor(rep(groups, each = 12))
+  distances_grid$Distances <- c(t(distances))
+  distances_grid <- distances_grid %>%
+    as_tibble() %>%
+    group_by(Group, Components) %>%
+    summarise(Distances = mean(Distances))
+  return(distances_grid)
 }
 
 plot_distances <- function(distances, d) {
@@ -39,6 +38,13 @@ plot_distances <- function(distances, d) {
   distance_plot$Distances <- c(t(distances))
   distance_plot <- distance_plot %>% as_tibble()
   plot <- ggplot(distance_plot, aes(x = Components, y = Observations)) +
+    geom_tile(aes(fill = Distances)) +
+    scale_fill_distiller(direction = 1)
+  return(plot)
+}
+
+plot_group_distances <- function(distance_grid, d) {
+  plot <- ggplot(distance_grid, aes(x = Components, y = Group)) +
     geom_tile(aes(fill = Distances)) +
     scale_fill_distiller(direction = 1)
   return(plot)

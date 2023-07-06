@@ -13,7 +13,7 @@ library(ggplot2)
 
 
 theme_set(theme_bw())
-knitr::opts_knit$set(dev = 'pdf',
+knitr::opts_knit$set(dev = "pdf",
               pdf.options(encoding = "ISOLatin9.enc"),
               message = FALSE,
               warning = FALSE,
@@ -37,12 +37,13 @@ set.seed(124)
 n <- 100 
 k <- 10
 l <- 100
+# Simlulate 100 objects in a 10 dimensional latent space
 original <- simulateCoalescent(n,k,l,
                          sigma0=0.2,
                          sigma = 0.5,
                          Amodel="uniform",
                          alpha=0,
-                         minedge=0.1) # Simlulate 100 objects in a 10 dimensional latent space
+                         minedge=0.1) 
 plot(original$tree)
 
 original_similar <- expand.grid(Subjects = as.factor(1:100), Subject = as.factor(1:100))
@@ -111,19 +112,20 @@ plot_UASE(mix_UASE)
 source("distances.R")
 library(hrbrthemes)
 
-distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
+UASE_distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
   distance_moved(mix_UASE$right, d = ii, scale = FALSE)
 })
 
-plot_distances(distances = distances, d = 12)
+plot_distances(distances = UASE_distances, d = 12)
 ```
 
 We now consider the average distanced moved for each group:
 ```{r}
 groups <- rep(1:10, each = 10)
-group_distanes(distances = distances, d = 12, groups = groups)
-
+UASE_distance_groups <- group_distances(distances = UASE_distances, d = 12, groups = groups)
+plot_group_distances(distance_groups, d = 12)
 ```
+
 # On different scales
 
 ```{r}
@@ -148,9 +150,8 @@ distances_scaled <- apply(
 })
 ```
 
-```{r}
-p_scaled <- plot_distances(distances = distances_scaled, d = 12) +
-  ggtitle("Distances Scaled")
+```{r}<<<vsc>>>/home/ac18826/Documents/COMPASS/First_Year/TB2/Project/Method_Comparisons/ROC_curves.html<<<vsc>>>
+
 p_scaled
 ```
 
@@ -197,3 +198,18 @@ plot_distances(distances = distances_omni, d = 12)
 ```
 
 
+# ROC curves
+To make an ROC curve, we need to turn the distances moved into some sort of probability distribution. We do this by fitting a kernel density estimate to the distances moved for each group. We then use the density estimates to compute the probability that a distance moved is greater than a threshold for each group. We then plot the ROC curve for each group.
+
+Since we are proposing the distance moved reflects the amount a node has moved, it makes sense to simply normalise the average distance moved for groups to sum to 1. We can then plot an ROC curve for each number of components to decide how many components to consider. As an example, we use the original UASE embedding.
+
+```{r}
+UASE_group_probs <- UASE_distance_groups %>%
+  group_by(Group) %>%
+  mutate(Probability = Distances/sum(Distances)) %>%
+  ungroup()
+```
+
+```{r}
+
+```

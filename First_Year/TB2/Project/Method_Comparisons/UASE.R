@@ -2,15 +2,12 @@ require(ggplot2)
 require(dplyr)
 require(gridExtra)
 
-UASE <- function(similarity, d = 2, population){
-  
+UASE <- function(similarity, d = 2, population) {
+
   svd <- svd(similarity)
-  
-  
-  
   U <- svd$u %*% diag(sqrt(svd$d))
   U <- U[, 1:d]
-  left <- as.data.frame(cbind(U, as.factor(population)))
+  left <- as.data.frame(cbind(U, population))
   d_char <- as.character(1:d)
   colnames(left) <- c(d_char, "population")
   
@@ -18,12 +15,11 @@ UASE <- function(similarity, d = 2, population){
   index <- rep(1:nrow(similarity),2)
   V <- svd$v %*% diag(sqrt(svd$d))
   V <- V[,1:d]
-  right <- as.data.frame(cbind(V,as.factor(t), 
-                               as.factor(population), 
+  right <- as.data.frame(cbind(V,as.factor(t),
+                               (population),
                                as.factor(index)))
   
   colnames(right) <- c(d_char," discipline", "population", "observation")
-  
   return(list(left = left, right = right, eigenvals = svd$d[1:d]))
 }
 

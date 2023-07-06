@@ -1,0 +1,133 @@
+---
+title: "ROC Curves"
+author: "Rachel Wood"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+
+library(ggplot2)
+
+
+theme_set(theme_bw())
+knitr::opts_knit$set(dev = "pdf",
+              pdf.options(encoding = "ISOLatin9.enc"),
+              message = FALSE,
+              warning = FALSE,
+              tidy.opts = list(width.cutoff = 50), tidy = TRUE,
+              fig.pos = "H", out.width = "60%",
+              fig.align = "center"
+              )
+
+scale_fill_continuous <- function(...) {
+  scale_fill_distiller(palette = "PuRd", ...)
+}
+```
+
+To make an ROC curve, we need to turn the distances moved into some sort of probability distribution. We do this by fitting a kernel density estimate to the distances moved for each group. We then use the density estimates to compute the probability that a distance moved is greater than a threshold for each group. We then plot the ROC curve for each group.
+
+Since we are proposing the distance moved reflects the amount a node has moved, it makes sense to simply normalise the average distance moved for groups to sum to 1. We can then plot an ROC curve for each number of components to decide how many components to consider. 
+
+# Simulations
+We use the `ClaritySim` package to generate our data sets of data. We will start with a tree and a fixed mixture. We start by using a mixture of the nodes furthest away from each other to test our methods:
+
+```{r}
+library(ClaritySim)
+set.seed(124)
+n <- 100
+k <- 10
+l <- 100
+original <- simulateCoalescent(n, k, l,
+                         sigma0 = 0.2,
+                         sigma = 0.5,
+                         Amodel = "uniform",
+                         alpha = 0,
+                         minedge = 0.1)
+ # Simlulate 100 objects in a 10 dimensional latent space
+plot(original$tree)
+
+original_similar <- expand.grid(
+    Subjects = as.factor(1:100),
+    Subject = as.factor(1:100))
+original_similar$values <- c(original$Y)
+
+ggplot(data = original_similar, aes(x = Subjects, y = Subject)) +
+  geom_tile(aes(fill = values)) +
+  theme(legend.position = "none", panel.border = element_rect(linewidth = 10)) +
+   theme_void() + coord_fixed()
+```
+
+We then alter the scaling of the branch lengths to affect the noisy-ness of the data. For any $r$, we can set the min branch length to be $r$ and the maximum branch length to be $r$.
+```{r}
+set.seed(123456)
+library(ape)
+mixed_fixed <- mixCoalescent(
+    original,
+    fraction = 1,
+    transform = FALSE)
+mixture <- mixed_fixed$edges
+```
+```{r}
+plot(mixed_fixed$tree)
+edges(mixture[1], mixture[2], arrows = 1)
+
+```
+
+
+We now perform the UASE procedure for different scaling parameters:
+```{r}
+library(dplyr)
+library(tidyverse)
+source("UASE.R")
+source("distances.R")
+r <- c(1 , 2, 3, 4, 5, 6, 7, 8, 9, 10)
+uase_group_probs <- tibble(
+    Scaling = NA,
+    Group = NA,
+    Components = NA,
+    Distances = NA,
+    Probability = NA)
+uase_group_probs <- uase_group_probs[-1, ]
+for (i in 1:length(r)) {
+    current_mixed <- transformCoalescent(
+        mixed_fixed,
+        multmin = 1 / r[i],
+        multmax = r[i])
+    similarity <- cbind(original$Y, current_mixed$Y)
+    current_uase <- UASE(similarity, d = 12, groups)
+
+
+    current_uase_distances <- apply(
+        as.matrix(1:12, nrow = 1),
+        MARGIN = 1,
+        FUN = function(ii) {
+            distance_moved(current_uase$right, d = ii, scale = FALSE)
+    })
+
+    groups <- rep(1:10, each = 10)
+    uase_distance_groups <- group_distances(
+        distances = current_uase_distances,
+        d = 12,
+        groups = groups)
+    uase_group_prob <- uase_distance_groups %>% # nolint
+        group_by(Group) %>%
+        mutate(Probability = Distances / sum(Distances)) %>%
+        ungroup()
+    uase_group_prob <- cbind(Scaling = r[i], uase_group_prob)
+
+    uase_group_probs <- rbind(uase_group_probs, uase_group_prob)
+}
+```
+
+
+
+
+
+```{r, eval=FALSE}
+UASE_group_probs <- UASE_distance_groups %>% # nolint
+  group_by(Group) %>%
+  mutate(Probability = Distances / sum(Distances)) %>%
+  ungroup()
+```
+
