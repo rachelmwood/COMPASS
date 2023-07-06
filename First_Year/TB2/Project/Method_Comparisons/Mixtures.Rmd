@@ -10,6 +10,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 
 library(ggplot2)
+
+
 theme_set(theme_bw())
 knitr::opts_knit$set(dev = 'pdf',
               pdf.options(encoding = "ISOLatin9.enc"),
@@ -52,7 +54,7 @@ original_sim_plot <- ggplot(data = original_similar, aes(x = Subjects, y = Subje
    theme_void() + coord_fixed()
 ```
 
-
+## Adding a mixture
 ```{r mixdatagen}
 mixed <- mixCoalescent(original, fraction = 1, transform = TRUE)
 mixture <- mixed$edges
@@ -105,8 +107,6 @@ plot_UASE(mix_UASE)
 ```
 
 
-
-
 ```{r}
 source("distances.R")
 library(hrbrthemes)
@@ -115,16 +115,15 @@ distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
   distance_moved(mix_UASE$right, d = ii, scale = FALSE)
 })
 
-distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances))
-distance_plot$distances <- c(t(distances))
-
-distance_plot <- as_tibble(distance_plot)
-ggplot(distance_plot, aes(x = Components))+
-  geom_tile(aes(y = Observations, fill = distances)) +
-  scale_fill_distiller(direction = 1) 
+plot_distances(distances = distances, d = 12)
 ```
 
+We now consider the average distanced moved for each group:
+```{r}
+groups <- rep(1:10, each = 10)
+group_distanes(distances = distances, d = 12, groups = groups)
 
+```
 # On different scales
 
 ```{r}
@@ -147,49 +146,22 @@ distances_scaled <- apply(
       scale = TRUE,
       eigenvals = mixed_UASE$eigenvals)
 })
-distances_scaled
 ```
 
-```{r, eval = FALSE}
-p <- plot_distances(distances_scaled, 12)
-p
-```
-
-
-```{r, eval=FALSE, include=FALSE}
-
-
-distances_scaled <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
-  distance_moved(mixed_UASE$right, d = ii, l =5,scale = TRUE, eigenvals = mixed_UASE$eigenvals)
-})
-
-scaled_distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances_scaled))
-scaled_distance_plot$distances <- c(t(distances_scaled))
-scaled_distance_plot$groups <- trunc( (scaled_distance_plot$Observations-1)/10) +1
-
-
-scaled_distance_plot <- as_tibble(scaled_distance_plot)
-p_scaled <- ggplot(scaled_distance_plot, aes(x = Components))+
-  geom_tile(aes(y = Observations, fill = distances)) +
-  scale_fill_distiller(direction = 1) +
+```{r}
+p_scaled <- plot_distances(distances = distances_scaled, d = 12) +
   ggtitle("Distances Scaled")
+p_scaled
+```
 
+
+```{r}
 distances <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii){
   distance_moved(mixed_UASE$right, d = ii, scale = FALSE)
 })
 
-distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances))
-distance_plot$distances <- c(t(distances))
-distance_plot$groups <- trunc( (distance_plot$Observations-1)/10) +1
-
-
-distance_plot <- as_tibble(distance_plot)
-p <- ggplot(distance_plot, aes(x = Components))+
-  geom_tile(aes(y = Observations, fill = distances)) +
-  scale_fill_distiller(direction = 1) +
-  ggtitle("Distances not Scaled")
-
-p_scaled
+p <- plot_distances(distances = distances, d = 12) +
+  ggtitle("Distances Unscaled")
 p
 ```
 
@@ -221,16 +193,7 @@ distances_omni <- apply(as.matrix(1:12, nrow = 1), MARGIN = 1, FUN = function(ii
 ```
 
 ```{r}
-omni_distance_plot <- expand.grid( Components = as.factor(1:12), Observations = 1:nrow(distances_omni))
-omni_distance_plot$distances <- c(t(distances_omni))
-omni_distance_plot$groups <- trunc( (omni_distance_plot$Observations-1)/10) +1
-
-
-omni_distance_plot <- as_tibble(omni_distance_plot)
-p <- ggplot(omni_distance_plot, aes(x = Components))+
-  geom_tile(aes(y = Observations, fill = distances)) +
-  scale_fill_distiller(direction = 1) 
-
-p
+plot_distances(distances = distances_omni, d = 12) 
 ```
+
 
