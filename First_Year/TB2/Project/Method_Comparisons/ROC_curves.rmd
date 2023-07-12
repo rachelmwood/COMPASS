@@ -127,15 +127,26 @@ for (i in 1:trials) {
 ```{r}
 library(pROC)
 roc_data <- results %>%
-    mutate(Group = as.factor(paste("Group_", Group, sep = ""))) %>%
+    mutate(Group = as.factor(paste("Group", Group)),
+    True_Anomaly = as.factor(paste("Group", True_Anomaly))) %>%
     select(- Distances) %>%
     pivot_wider(names_from = Group, values_from = Probability)
-    mutate(Probability = ifelse(Probability == 0, 0.0001, Probability))
 
-roc_results <- multiclass.roc(
-    response = as.factor(paste("Group_", roc_data$True_Anomaly,  sep = "")),
-    predictor = roc_data[,5:14])
+
+roc_fit <- multiclass.roc(
+    response = roc_data$True_Anomaly,
+    predictor = as.matrix(roc_data[, 5:14]),
+    ret = TRUE)
 ``` 
+
+```{r}
+library(ROCR)
+roc_predict <- prediction(
+    predictions = as.matrix(roc_data[, 5:14]),
+    labels = roc_data$True_Anomaly)
+```
+
+
 
 ```{r, include=FALSE}
 thresholds <- seq(0, 1, length.out = 100)
@@ -164,7 +175,7 @@ for (i in 1:length(thresholds)) {
 }
 ```
 
-```{r}
+```{r, eval = FALSE}
 plot_roc_data <- roc_data %>%
     mutate(Components = as.factor(Components)) %>%
     filter(Threshold < 0.25)
