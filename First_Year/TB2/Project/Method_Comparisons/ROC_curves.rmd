@@ -61,6 +61,8 @@ ggplot(data = original_similar, aes(x = Subjects, y = Subject)) +
 We then alter the scaling of the branch lengths to affect the noisy-ness of the data. For any $r$, we can set the min branch length to be $r$ and the maximum branch length to be $r$.
 ```{r}
 set.seed(123456)
+mix <- original
+mix$edges <- c()
 library(ape)
 mixed_fixed <- mixCoalescent(
     original,
@@ -76,24 +78,24 @@ edges(mixture[1], mixture[2], arrows = 1)
 
 
 We now perform the UASE procedure for different scaling parameters:
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(dplyr)
 library(tidyverse)
 source("UASE.R")
 source("distances.R")
-r <- c(1 , 2, 3, 4, 5, 6, 7, 8, 9, 10)
-uase_group_probs <- tibble(
-    Scaling = NA,
-    Group = NA,
-    Components = NA,
-    Distances = NA,
-    Probability = NA)
-uase_group_probs <- uase_group_probs[-1, ]
-for (i in 1:length(r)) {
-    current_mixed <- transformCoalescent(
-        mixed_fixed,
-        multmin = 1 / r[i],
-        multmax = r[i])
+trials <- 100
+results <- tibble(
+    Trial = NA,
+    Component = NA,
+    Distance = NA,
+    Probability = NA,
+    True_Anomaly = NA,
+    Mix_Source = NA)
+results <- results[-1, ]
+for (i in 1:trials) {
+    current_mixed <- mixCoalescent(
+        sim = original,
+        qmin = 0.8)
     similarity <- cbind(original$Y, current_mixed$Y)
     current_uase <- UASE(similarity, d = 12, groups)
 
@@ -103,31 +105,75 @@ for (i in 1:length(r)) {
         MARGIN = 1,
         FUN = function(ii) {
             distance_moved(current_uase$right, d = ii, scale = FALSE)
-    })
+        })
 
     groups <- rep(1:10, each = 10)
     uase_distance_groups <- group_distances(
         distances = current_uase_distances,
         d = 12,
         groups = groups)
-    uase_group_prob <- uase_distance_groups %>% # nolint
+    uase_distance_groups <- uase_distance_groups %>% # nolint
         group_by(Group) %>%
         mutate(Probability = Distances / sum(Distances)) %>%
-        ungroup()
-    uase_group_prob <- cbind(Scaling = r[i], uase_group_prob)
-
-    uase_group_probs <- rbind(uase_group_probs, uase_group_prob)
+        ungroup() %>%
+        add_column(Trial = i, .before = 1) %>%
+        mutate(True_Anomaly = current_mixed$edges[1],
+        Mix_Source = current_mixed$edges[2])
+    results <- rbind(results, uase_distance_groups)
 }
 ```
 
 
+```{r}
+library(pROC)
+roc_data <- results %>%
+    mutate(Group = as.factor(paste("Group_", Group, sep = ""))) %>%
+    select(- Distances) %>%
+    pivot_wider(names_from = Group, values_from = Probability)
+    mutate(Probability = ifelse(Probability == 0, 0.0001, Probability))
 
+roc_results <- multiclass.roc(
+    response = as.factor(paste("Group_", roc_data$True_Anomaly,  sep = "")),
+    predictor = roc_data[,5:14])
+``` 
 
+```{r, include=FALSE}
+thresholds <- seq(0, 1, length.out = 100)
 
-```{r, eval=FALSE}
-UASE_group_probs <- UASE_distance_groups %>% # nolint
-  group_by(Group) %>%
-  mutate(Probability = Distances / sum(Distances)) %>%
-  ungroup()
+roc_data <- tibble(
+    Threshold = NA,
+    Components = NA,
+    True_Positives = NA
+)
+roc_data <- roc_data[-1,]
+true_anomaly <- mixture[1]
+for (i in 1:length(thresholds)) {
+    current_threshold <- thresholds[i]
+
+    current_roc <- results %>%
+        group_by(Trial, Components) %>%
+        filter(Group == true_anomaly) %>%
+        mutate(
+            Anomaly = ifelse(Probability > current_threshold, 1, 0),
+            - Group) %>%
+        group_by(Components) %>%
+        summarise(
+            True_Positives = sum(Anomaly))
+    current_roc <- cbind(Threshold = current_threshold, current_roc)
+    roc_data <- rbind(roc_data, current_roc)
+}
 ```
 
+```{r}
+plot_roc_data <- roc_data %>%
+    mutate(Components = as.factor(Components)) %>%
+    filter(Threshold < 0.25)
+# Plot the ROC curve for component 3 only
+pdf()
+ggplot(data = plot_roc_data, aes(x = Threshold, y = True_Positives)) +
+    geom_line(aes(colour = Components)) +
+    theme_bw() +
+    labs(x = "Threshold", y = "True Positives")
+dev.off()
+```
+```
