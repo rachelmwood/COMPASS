@@ -20,8 +20,8 @@ distance_moved <- function(V, d, l = 2, scale = TRUE, eigenvals = NULL) {
 
 group_distances <- function(distances, d, groups) {
   distances_grid <- expand.grid(
-    Components = 1:d,
-    Observations = 1:nrow(distances))
+    Components = as.factor(1:d),
+    Observations = as.factor(1:nrow(distances)))
   distances_grid$Group <- as.factor(rep(groups, each = 12))
   distances_grid$Distances <- c(t(distances))
   distances_grid <- distances_grid %>%

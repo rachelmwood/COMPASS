@@ -73,118 +73,80 @@ mixture <- mixed_fixed$edges
 ```{r}
 plot(mixed_fixed$tree)
 edges(mixture[1], mixture[2], arrows = 1)
-
 ```
 
 
-We now perform the UASE procedure for different scaling parameters:
-```{r, message=FALSE, warning=FALSE}
+```{r}
 library(dplyr)
 library(tidyverse)
 source("UASE.R")
 source("distances.R")
-trials <- 100
-results <- tibble(
-    Trial = NA,
-    Component = NA,
-    Distance = NA,
-    Probability = NA,
-    True_Anomaly = NA,
-    Mix_Source = NA)
-results <- results[-1, ]
-for (i in 1:trials) {
-    current_mixed <- mixCoalescent(
-        sim = original,
-        qmin = 0.8)
-    similarity <- cbind(original$Y, current_mixed$Y)
-    current_uase <- UASE(similarity, d = 12, groups)
+similarity <- cbind(original$Y, mixed_fixed$Y)
+uase <- UASE(similarity, d = 12, groups)
+```
 
+```{r}
+distances <- apply(
+    as.matrix(1:12, nrow = 1),
+    MARGIN = 1,
+    FUN = function(ii) {
+        distance_moved(uase$right, d = ii, scale = FALSE)
+    })
 
-    current_uase_distances <- apply(
-        as.matrix(1:12, nrow = 1),
-        MARGIN = 1,
-        FUN = function(ii) {
-            distance_moved(current_uase$right, d = ii, scale = FALSE)
-        })
-
-    groups <- rep(1:10, each = 10)
-    uase_distance_groups <- group_distances(
-        distances = current_uase_distances,
-        d = 12,
-        groups = groups)
-    uase_distance_groups <- uase_distance_groups %>% # nolint
-        group_by(Group) %>%
-        mutate(Probability = Distances / sum(Distances)) %>%
-        ungroup() %>%
-        add_column(Trial = i, .before = 1) %>%
-        mutate(True_Anomaly = current_mixed$edges[1],
-        Mix_Source = current_mixed$edges[2])
-    results <- rbind(results, uase_distance_groups)
-}
+groups <- rep(1:10, each = 10)
+uase_distance_groups <- group_distances(
+    distances = distances,
+    d = 12,
+    groups = groups)
+uase_distance_groups <- uase_distance_groups %>% # nolint
+    group_by(Group) %>%
+    mutate(Probability = Distances / sum(Distances),
+    True_Anomaly = as.numeric(Group == 10))
 ```
 
 
 ```{r}
-library(pROC)
-roc_data <- results %>%
-    mutate(Group = as.factor(paste("Group", Group)),
-    True_Anomaly = as.factor(paste("Group", True_Anomaly))) %>%
-    select(- Distances) %>%
-    pivot_wider(names_from = Group, values_from = Probability)
-
-
-roc_fit <- multiclass.roc(
-    response = roc_data$True_Anomaly,
-    predictor = as.matrix(roc_data[, 5:14]),
-    ret = TRUE)
-``` 
-
-```{r}
-library(ROCR)
-roc_predict <- prediction(
-    predictions = as.matrix(roc_data[, 5:14]),
-    labels = roc_data$True_Anomaly)
-```
-
-
-
-```{r, include=FALSE}
-thresholds <- seq(0, 1, length.out = 100)
+max_thresh <- max(uase_distance_groups$Probability)
+thresholds <- seq(0, max_thresh + 0.05, length.out = 100)
 
 roc_data <- tibble(
     Threshold = NA,
     Components = NA,
-    True_Positives = NA
+    True_Positive_Rate = NA,
+    False_Positive_Rate = NA
 )
-roc_data <- roc_data[-1,]
-true_anomaly <- mixture[1]
+pos <- uase_distance_groups %>%
+    filter(True_Anomaly == 1) %>%
+    nrow() / 12
+neg <- uase_distance_groups %>%
+    filter(True_Anomaly == 0) %>%
+    nrow() / 12
+
+roc_data <- roc_data[-1, ]
+
 for (i in 1:length(thresholds)) {
     current_threshold <- thresholds[i]
-
-    current_roc <- results %>%
-        group_by(Trial, Components) %>%
-        filter(Group == true_anomaly) %>%
-        mutate(
-            Anomaly = ifelse(Probability > current_threshold, 1, 0),
-            - Group) %>%
+    current_class <- uase_distance_groups %>%
+        mutate(Anomaly = as.numeric(Probability >= current_threshold),
+               True_Positive = as.numeric(Anomaly == 1 & True_Anomaly == 1),
+               False_Positive = as.numeric(Anomaly == 1 & True_Anomaly == 0)) %>%
         group_by(Components) %>%
-        summarise(
-            True_Positives = sum(Anomaly))
-    current_roc <- cbind(Threshold = current_threshold, current_roc)
-    roc_data <- rbind(roc_data, current_roc)
+        summarise(Threshold = current_threshold,
+                  True_Positive_Rate = sum(True_Positive) / pos,
+                   False_Positive_Rate = sum(False_Positive) / neg)
+    roc_data <- rbind(roc_data, current_class)
 }
 ```
 
-```{r, eval = FALSE}
-plot_roc_data <- roc_data %>%
-    mutate(Components = as.factor(Components)) %>%
-    filter(Threshold < 0.25)
-# Plot the ROC curve for component 3 only
-pdf()
-ggplot(data = plot_roc_data, aes(x = Threshold, y = True_Positives)) +
+
+```{r}
+plot <- roc_data %>%
+    filter(!((False_Positive_Rate == 0 & True_Positive_Rate > 0.1) |
+    (True_Positive_Rate == 0 & False_Positive_Rate > 0.1)))
+
+ggplot(data = plot, aes(x = False_Positive_Rate, y = True_Positive_Rate)) +
     geom_line(aes(colour = Components)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
     theme_bw() +
-    labs(x = "Threshold", y = "True Positives")
-dev.off()
-```
+    labs(x = "False Positive Rate", y = "True Positive Rate")
 ```
