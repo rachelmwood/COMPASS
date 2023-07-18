@@ -104,10 +104,36 @@ uase_distance_groups <- uase_distance_groups %>% # nolint
     True_Anomaly = as.numeric(Group == 10))
 ```
 
+```{r}
+library(ROCit)
+fits <- vector(method = "list", length = 12)
+par(mfrow = c(2, 2))
+for (i in 1:4) {
+    current_comp <- uase_distance_groups %>%
+        filter(Components == i)
+    roc_fit <- rocit(score = current_comp$Probability,
+                     class = current_comp$True_Anomaly)
+    plot(roc_fit)
+    print(ciAUC(roc_fit))
+}
+
+```
+
+
 
 ```{r}
+roc_fit <- rocit(score = uase_distance_groups$Probability,
+                 class = uase_distance_groups$True_Anomaly)
+plot(roc_fit)
+```
+
+```{r}
+```
+
+```{r}
+min_thresh <- min(uase_distance_groups$Probability)
 max_thresh <- max(uase_distance_groups$Probability)
-thresholds <- seq(0, max_thresh + 0.05, length.out = 100)
+thresholds <- seq(min_thresh - 0.05, max_thresh + 0.05, length.out = 100)
 
 roc_data <- tibble(
     Threshold = NA,
@@ -141,12 +167,15 @@ for (i in 1:length(thresholds)) {
 
 ```{r}
 plot <- roc_data %>%
-    filter(!((False_Positive_Rate == 0 & True_Positive_Rate > 0.1) |
-    (True_Positive_Rate == 0 & False_Positive_Rate > 0.1)))
+    filter(Components %in% c(1, 2, 3, 4))
 
+pdf("ROC.pdf", width = 10, height = 10)
 ggplot(data = plot, aes(x = False_Positive_Rate, y = True_Positive_Rate)) +
     geom_line(aes(colour = Components)) +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
     theme_bw() +
-    labs(x = "False Positive Rate", y = "True Positive Rate")
+    labs(x = "False Positive Rate",
+         y = "True Positive Rate",
+         legend = "Number of Components")
+dev.off()
 ```

@@ -34,18 +34,20 @@ group_distances <- function(distances, d, groups) {
 plot_distances <- function(distances, d) {
   distance_plot <- expand.grid(
     Components = 1:d,
-    Observations = 1:nrow(distances))
+    Observations = 1:nrow(distances)) # nolint
   distance_plot$Distances <- c(t(distances))
   distance_plot <- distance_plot %>% as_tibble()
-  plot <- ggplot(distance_plot, aes(x = Components, y = Observations)) +
-    geom_tile(aes(fill = Distances)) +
+  plot <- ggplot(distance_plot,
+      aes(x = Components, y = Observations)) + # nolint: object_usage_linter.
+    geom_tile(aes(fill = Distances)) + # nolint: object_usage_linter.
     scale_fill_distiller(direction = 1)
   return(plot)
 }
 
 plot_group_distances <- function(distance_grid, d) {
-  plot <- ggplot(distance_grid, aes(x = Components, y = Group)) +
-    geom_tile(aes(fill = Distances)) +
+  plot <- ggplot(distance_grid,
+      aes(x = Components, y = Group)) + # nolint: object_usage_linter.
+    geom_tile(aes(fill = Distances)) + # nolint: object_usage_linter.
     scale_fill_distiller(direction = 1)
   return(plot)
 }
