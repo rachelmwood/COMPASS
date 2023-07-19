@@ -38,7 +38,7 @@ set.seed(124)
 n <- 100
 k <- 10
 l <- 100
-original <- simulateCoalescent(n, k, l,
+original <- simulateCoalescent(n,k,l,
                          sigma0 = 0.2,
                          sigma = 0.5,
                          Amodel = "uniform",
@@ -61,7 +61,7 @@ ggplot(data = original_similar, aes(x = Subjects, y = Subject)) +
 We then alter the scaling of the branch lengths to affect the noisy-ness of the data. For any $r$, we can set the min branch length to be $r$ and the maximum branch length to be $r$.
 ```{r}
 set.seed(123456)
-mix <- original
+mix <- origina
 mix$edges <- c()
 library(ape)
 mixed_fixed <- mixCoalescent(
@@ -102,80 +102,37 @@ uase_distance_groups <- uase_distance_groups %>% # nolint
     group_by(Group) %>%
     mutate(Probability = Distances / sum(Distances),
     True_Anomaly = as.numeric(Group == 10))
+obvs_distances <- distances %>%
+    as_tibble() %>%
+    mutate(True_Anomaly = as.numeric(groups == 10))
 ```
 
 ```{r}
-library(ROCit)
-fits <- vector(method = "list", length = 12)
-par(mfrow = c(2, 2))
-for (i in 1:4) {
-    current_comp <- uase_distance_groups %>%
-        filter(Components == i)
-    roc_fit <- rocit(score = current_comp$Probability,
-                     class = current_comp$True_Anomaly)
-    plot(roc_fit)
-    print(ciAUC(roc_fit))
-}
-
-```
-
-
-
-```{r}
-roc_fit <- rocit(score = uase_distance_groups$Probability,
-                 class = uase_distance_groups$True_Anomaly)
-plot(roc_fit)
+obvs_distances <- distance_moved(uase$right, maxd = 4, scale = FALSE) %>%
+    as_tibble() %>%
+    mutate(True_Anomaly = as.numeric(Group == 10))
 ```
 
 ```{r}
-```
-
-```{r}
-min_thresh <- min(uase_distance_groups$Probability)
-max_thresh <- max(uase_distance_groups$Probability)
-thresholds <- seq(min_thresh - 0.05, max_thresh + 0.05, length.out = 100)
-
-roc_data <- tibble(
-    Threshold = NA,
-    Components = NA,
-    True_Positive_Rate = NA,
-    False_Positive_Rate = NA
-)
-pos <- uase_distance_groups %>%
-    filter(True_Anomaly == 1) %>%
-    nrow() / 12
-neg <- uase_distance_groups %>%
-    filter(True_Anomaly == 0) %>%
-    nrow() / 12
-
-roc_data <- roc_data[-1, ]
-
-for (i in 1:length(thresholds)) {
-    current_threshold <- thresholds[i]
-    current_class <- uase_distance_groups %>%
-        mutate(Anomaly = as.numeric(Probability >= current_threshold),
-               True_Positive = as.numeric(Anomaly == 1 & True_Anomaly == 1),
-               False_Positive = as.numeric(Anomaly == 1 & True_Anomaly == 0)) %>%
-        group_by(Components) %>%
-        summarise(Threshold = current_threshold,
-                  True_Positive_Rate = sum(True_Positive) / pos,
-                   False_Positive_Rate = sum(False_Positive) / neg)
-    roc_data <- rbind(roc_data, current_class)
-}
+mix_roc <- roc_data(score = obvs_distances$Distances,
+                    classes = obvs_distances$True_Anomaly,
+                    groups = obvs_distances$Components)
 ```
 
 
 ```{r}
-plot <- roc_data %>%
-    filter(Components %in% c(1, 2, 3, 4))
-
-pdf("ROC.pdf", width = 10, height = 10)
-ggplot(data = plot, aes(x = False_Positive_Rate, y = True_Positive_Rate)) +
-    geom_line(aes(colour = Components)) +
-    geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
-    theme_bw() +
-    labs(x = "False Positive Rate",
-         y = "True Positive Rate",
-         legend = "Number of Components")
-dev.off()
+mix_roc <- mix_roc[1:4]
+plot_rocs(mix_roc)
 ```
+
+```{r}
+source("rocs.R")
+mix_data <- roc_data(score = uase_distance_groups$Probability,
+                     classes = uase_distance_groups$True_Anomaly,
+                     groups = uase_distance_groups$Components)
+mix_data <- mix_data %>% # nolint
+    as_tibble() %>%
+    filter(grouping == c(1,2,3,4))
+plot_rocs(mix_data, grouping = "Components")
+```
+
