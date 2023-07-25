@@ -108,7 +108,7 @@ obvs_distances <- distances %>%
 ```
 
 ```{r}
-obvs_distances <- distance_moved(uase$right, maxd = 4, scale = FALSE) %>%
+obvs_distances <- distance_moved(uase$right, maxd = 5, scale = FALSE) %>%
     as_tibble() %>%
     mutate(True_Anomaly = as.numeric(Group == 10))
 ```
@@ -121,7 +121,7 @@ mix_roc <- roc_data(score = obvs_distances$Distances,
 
 
 ```{r}
-mix_roc <- mix_roc[1:4]
+mix_roc <- mix_roc[1:5]
 plot_rocs(mix_roc)
 ```
 
