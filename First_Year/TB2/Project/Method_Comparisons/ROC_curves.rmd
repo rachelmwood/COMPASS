@@ -38,7 +38,7 @@ set.seed(124)
 n <- 100
 k <- 10
 l <- 100
-original <- simulateCoalescent(n,k,l,
+original <- simulateCoalescent(n, k, l,
                          sigma0 = 0.2,
                          sigma = 0.5,
                          Amodel = "uniform",
@@ -61,7 +61,7 @@ ggplot(data = original_similar, aes(x = Subjects, y = Subject)) +
 We then alter the scaling of the branch lengths to affect the noisy-ness of the data. For any $r$, we can set the min branch length to be $r$ and the maximum branch length to be $r$.
 ```{r}
 set.seed(123456)
-mix <- origina
+mix <- original
 mix$edges <- c()
 library(ape)
 mixed_fixed <- mixCoalescent(
@@ -107,18 +107,6 @@ obvs_distances <- distances %>%
     mutate(True_Anomaly = as.numeric(groups == 10))
 ```
 
-```{r}
-obvs_distances <- distance_moved(uase$right, maxd = 5, scale = FALSE) %>%
-    as_tibble() %>%
-    mutate(True_Anomaly = as.numeric(Group == 10))
-```
-
-```{r}
-mix_roc <- roc_data(score = obvs_distances$Distances,
-                    classes = obvs_distances$True_Anomaly,
-                    groups = obvs_distances$Components)
-```
-
 
 ```{r}
 mix_roc <- mix_roc[1:5]
@@ -127,12 +115,51 @@ plot_rocs(mix_roc)
 
 ```{r}
 source("rocs.R")
+n <- 100
+    k <- 10
+    l <- 100
 mix_data <- roc_data(score = uase_distance_groups$Probability,
                      classes = uase_distance_groups$True_Anomaly,
                      groups = uase_distance_groups$Components)
-mix_data <- mix_data %>% # nolint
+mix_data <- mix_data %>% # nolintgroups <- rep(1:10, each = 10)
     as_tibble() %>%
-    filter(grouping == c(1,2,3,4))
+    filter(grouping == c(1, 2, 3, 4))
 plot_rocs(mix_data, grouping = "Components")
 ```
 
+```{r}
+set.seed(123456)
+trials <- 100
+n <- 100
+k <- 10
+l <- 100
+data <- tibble(
+    trial = NA,
+    K = NA,
+    AUC = NA
+)
+for (i in 1:trials){
+    original <- simulateCoalescent(n, k, l,
+                         sigma0 = 0.2,
+                         sigma = 0.5,
+                         Amodel = "uniform",
+                         alpha = 0,
+                         minedge = 0.1)
+    mix <- mixCoalescent(
+        original,
+        fraction = 1,
+        transform = TRUE,
+    )
+    Y <- c(original$Y, mix$Y) # nolint
+    groups <- rep(1:10, each = 10)
+    uase <- UASE(Y, d = 12, groups)
+    distances <- apply(
+        as.matrix(1:12, nrow = 1),
+        MARGIN = 1,
+        FUN = function(ii) {
+            distance_moved(uase$right, d = ii, scale = FALSE)
+        })
+    anomaly <- mix$edges[1]
+    
+}
+```

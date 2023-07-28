@@ -17,12 +17,12 @@ dim_distance <- function(V, d, l = 2, scale = TRUE, eigenvals = NULL) {
   return(moved)
 }
 
-distance_moved <- function(mat, maxd, scale = TRUE){
+distance_moved <- function(mat, maxd, scale = TRUE, eigenvals = NULL) {
   distances <- apply(
     as.matrix(1:maxd, nrow = 1),
     MARGIN = 1,
     FUN = function(ii) {
-        dim_distance(mat, d = ii, scale = scale)
+        dim_distance(mat, d = ii, scale = scale, eigenvals = eigenvals)
     })
   distances_grid <- expand.grid(
     Components = as.factor(1:maxd),
