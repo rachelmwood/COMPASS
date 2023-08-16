@@ -2,32 +2,32 @@ require(dplyr)
 require(ggplot2)
 
 
-dim_distance <- function(V, d, l = 2, scale = TRUE, eigenvals = NULL) {
-  if (scale) {
-    V[,1:d] <- as.matrix(V[,1:d]) %*% # nolint
-    diag(1 / sqrt(as.numeric(eigenvals[1:d])), nrow = d)
-  }
+dim_distance <- function(V, d, l = 2, scale = TRUE) {
   V <- V %>% as_tibble()
   n <- nrow(V)
   V1 <- V[1:(n / 2), 1:d]
   V2 <- V[(n / 2 + 1):n, 1:d]
+
+  if (scale) {
+    V1 <- V1 %>% scale()
+    V2 <- V2 %>% scale()
+  }
   moved <- sapply(1:(n/2), FUN = function(i){
     dist(rbind(V1[i, ], V2[i, ]), method = "minkowski", p = l)
   })
   return(moved)
 }
 
-distance_moved <- function(mat, maxd, scale = TRUE, eigenvals = NULL) {
+distance_moved <- function(mat, maxd, scale = TRUE) {
   distances <- apply(
     as.matrix(1:maxd, nrow = 1),
     MARGIN = 1,
     FUN = function(ii) {
-        dim_distance(mat, d = ii, scale = scale, eigenvals = eigenvals)
+        dim_distance(mat, d = ii, scale = scale)
     })
   distances_grid <- expand.grid(
     Components = as.factor(1:maxd),
-    Observations = as.factor(1:nrow(distances)))
-  distances_grid$Group <- as.factor(rep(groups, each = maxd))
+    Observations = as.factor(1:(nrow(mat) / 2)))
   distances_grid$Distances <- c(t(distances))
   distances_grid <- distances_grid %>%
     as_tibble()

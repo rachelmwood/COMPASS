@@ -1,67 +1,90 @@
 library(dplyr)
 source("UASE.R")
 source("distances.R")
+source("rocs.R")
 library(ClaritySim)
 library(ROCit)
 library(ggplot2)
+library(graphstats)
 
 set.seed(123)
 trials <- 100
-n <- 100
-k <- 10
+n <- 90
+k <- 3
 l <- 50
 d <- 12
 data <- tibble(
     trial = NA,
+    Method = NA,
     K = NA,
     AUC = NA
 )
 data <- data[-1, ]
 for (i in 1:trials){
     original <- simulateCoalescent(n, k, l,
-                         sigma0 = 0.01,
-                         sigma = 0.01,
+                         sigma0 = 0.02,
+                         sigma = 0.5,
                          Amodel = "uniform",
                          alpha = 0,
                          minedge = 0.1)
     mix <- mixCoalescent(
         original,
-        fraction = 1,
         transform = FALSE,
-        multmin = 1,
-        multmax = 1,
-        qmin = 0.75
+        fraction = 1,
+        qmin = 0.8
     )
-    Y <- cbind(original$Y, mix$Y) # nolint
-    groups <- rep(1:10, each = 10)
+
+    # UASE AUC Computations
+    Y <- cbind(original$Y, mix$Y)
+    groups <- rep(1:10, each = k)
     uase <- UASE(Y, d = d, groups)
-    distances <- distance_moved(uase$right, maxd = d,
-        scale = TRUE, eigenvals = uase$eigenvals)
+    uase_distances <- distance_moved(uase$right, maxd = d,
+        scale = TRUE)
     anomaly <- mix$edges[1]
-    distances <- distances %>%
+    uase_distances <- uase_distances %>%
         mutate(
             Anomaly = ifelse(Observations == anomaly, 1, 0)
         )
-    for (ii in 1:d){
-        current_distances <- distances %>%
-            filter(Components == ii)
-        current_roc <- rocit(score = current_distances$Distances,
-                             class = current_distances$Anomaly)
-        data <- data %>%
-            add_row(
-                trial = i,
-                K = ii,
-                AUC = current_roc$AUC
-            )
+    uase_auc <- auc(uase_distances, d)
+    data <- data %>%
+        rbind(tibble(
+            trial = i,
+            Method = "UASE",
+            K = uase_auc$K,
+            AUC = uase_auc$AUC
+        ))
+    if (sum(uase_auc$AUC == 0) > 1){
+        plot(mix$tree)
+        
     }
+
+    # OMNI AUC Computations
+    omni <- svd(gs.omni(original$Y, mix$Y))
+
+    omni_distances <- distance_moved(omni$u, maxd = d,
+        scale = TRUE)
+    omni_distances <- omni_distances %>%
+        mutate(
+            Anomaly = ifelse(Observations == anomaly, 1, 0)
+        )
+    omni_auc <- auc(omni_distances, d)
+    data <- data %>%
+        rbind(tibble(
+            trial = i,
+            Method = "Omni",
+            K = omni_auc$K,
+            AUC = omni_auc$AUC
+        ))
 }
 data <- data %>%
     mutate(
         K = as.factor(K)
     )
-pdf("AUC_boxplot.pdf")
-ggplot(data = data,
-                     aes(x = K, y = AUC, fill = K)) +
+
+uase_data <- data %>%
+    filter(Method == "UASE")
+ggplot(data = uase_data,
+        aes(x = K, y = AUC, fill = K)) +
     geom_boxplot(notch = TRUE) +
     stat_summary(fun = median,
                geom = "line",
@@ -70,4 +93,18 @@ ggplot(data = data,
          y = "AUC") +
     theme_bw() +
     theme(legend.position = "none")
-dev.off()
+ggsave("uase_AUC_boxplot.pdf", width = 5, height = 5)
+
+omni_data <- data %>%
+    filter(Method == "Omni")
+ggplot(data = omni_data,
+        aes(x = K, y = AUC, fill = K)) +
+    geom_boxplot(notch = TRUE) +
+    stat_summary(fun = median,
+               geom = "line",
+               aes(group = 1)) +
+    labs(x = "Number of Components",
+         y = "AUC") +
+    theme_bw() +
+    theme(legend.position = "none")
+ggsave("omni_AUC_boxplot.pdf", width = 5, height = 5)
