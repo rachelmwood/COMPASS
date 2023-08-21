@@ -2,32 +2,24 @@ require(dplyr)
 require(ggplot2)
 
 
-dim_distance <- function(V, d, l = 2, scale = TRUE) {
-  V <- V %>% as_tibble()
-  n <- nrow(V)
-  V1 <- V[1:(n / 2), 1:d]
-  V2 <- V[(n / 2 + 1):n, 1:d]
-
+distance_moved <- function(mat, maxd, scale = TRUE, eigenvals = NULL) {
   if (scale) {
-    V1 <- V1 %>% scale()
-    V2 <- V2 %>% scale()
+    mat <- mat[, 1:maxd] %*% diag(1 / sqrt(eigenvals[1:maxd]))
   }
-  moved <- sapply(1:(n/2), FUN = function(i){
-    dist(rbind(V1[i, ], V2[i, ]), method = "minkowski", p = l)
-  })
-  return(moved)
-}
-
-distance_moved <- function(mat, maxd, scale = TRUE) {
+  n <- nrow(mat)
   distances <- apply(
     as.matrix(1:maxd, nrow = 1),
     MARGIN = 1,
     FUN = function(ii) {
-        dim_distance(mat, d = ii, scale = scale)
+      if (ii == 1) {
+        return((mat[1:(n / 2), 1:ii] - mat[(n / 2 + 1):n, 1:ii]) ^ 2)
+      } else {
+        return(rowSums((mat[1:(n / 2), 1:ii] - mat[(n / 2 + 1):n, 1:ii]) ^ 2))
+      }
     })
   distances_grid <- expand.grid(
     Components = as.factor(1:maxd),
-    Observations = as.factor(1:(nrow(mat) / 2)))
+    Observations = as.factor(1:(n / 2)))
   distances_grid$Distances <- c(t(distances))
   distances_grid <- distances_grid %>%
     as_tibble()
@@ -42,13 +34,12 @@ group_distances <- function(distances) {
   return(distances_grid)
 }
 
-plot_distances <- function(distances, d) {
-  distance_plot <- expand.grid(
-    Components = 1:d,
-    Observations = 1:nrow(distances)) # nolint
-  distance_plot$Distances <- c(t(distances))
-  distance_plot <- distance_plot %>% as_tibble()
-  plot <- ggplot(distance_plot,
+plot_distances <- function(distances) {
+  distances <- distances %>%
+    mutate(
+      Observations = as.factor(Observations),
+      Components = as.factor(Components))
+  plot <- ggplot(distances,
       aes(x = Components, y = Observations)) + # nolint: object_usage_linter.
     geom_tile(aes(fill = Distances)) + # nolint: object_usage_linter.
     scale_fill_distiller(direction = 1)

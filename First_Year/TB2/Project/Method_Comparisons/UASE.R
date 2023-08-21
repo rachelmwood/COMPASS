@@ -20,7 +20,7 @@ UASE <- function(similarity, d = 2, population) {
   return(list(left = left, right = right, eigenvals = svd$d[1:d]))
 }
 
-plot_UASE <- function(uase, d = 2) {
+plot_UASE <- function(uase, d = 2, population) {
   U <- uase$left %>%
     as_tibble() %>%
     mutate(population = as.factor(population))
@@ -54,28 +54,4 @@ plot_UASE <- function(uase, d = 2) {
   lay <- rbind(c(1, 2),
                c(3, 3))
   grid.arrange(V1_plot, V2_plot, U_plot, layout_matrix = lay)
-}
-
-distance_moved <- function(V, d, scale=TRUE, eigenvals = NULL){
-  
-  if(scale){
-    V[,1:d] <-as.matrix(V[,1:d]) %*% diag(as.vector(sqrt(eigenvals[1:d])), nrow = d)
-  }
-  V <- V %>% as_tibble()
-  
-  n <- nrow(V) 
-  
-  V1 <- V[1:(n/2),1:d]
-  V2 <- V[(n/2 +1):n, 1:d]
-  moved <- sapply(1:(n/2), FUN = function(i){
-    dist(rbind(V1[i,], V2[i,]))
-  })
-  
-  return(moved)
-}
-
-plot_distances <- function(UASE, d){
-  distances <- apply(as.matrix(1:d, nrow = 1), MARGIN = 1, FUN = function(ii){
-    distance_moved(mixed_UASE, d = ii)
-  })
 }

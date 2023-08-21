@@ -7,10 +7,9 @@ library(ROCit)
 library(ggplot2)
 library(graphstats)
 
-set.seed(123)
 trials <- 100
 n <- 90
-k <- 3
+k <- 10
 l <- 50
 d <- 12
 data <- tibble(
@@ -21,6 +20,7 @@ data <- tibble(
 )
 data <- data[-1, ]
 for (i in 1:trials){
+    set.seed(i)
     original <- simulateCoalescent(n, k, l,
                          sigma0 = 0.02,
                          sigma = 0.5,
@@ -39,7 +39,7 @@ for (i in 1:trials){
     groups <- rep(1:10, each = k)
     uase <- UASE(Y, d = d, groups)
     uase_distances <- distance_moved(uase$right, maxd = d,
-        scale = TRUE)
+        scale = TRUE, eigenvals = uase$eigenvals)
     anomaly <- mix$edges[1]
     uase_distances <- uase_distances %>%
         mutate(
@@ -53,16 +53,12 @@ for (i in 1:trials){
             K = uase_auc$K,
             AUC = uase_auc$AUC
         ))
-    if (sum(uase_auc$AUC == 0) > 1){
-        plot(mix$tree)
-        
-    }
 
     # OMNI AUC Computations
     omni <- svd(gs.omni(original$Y, mix$Y))
 
     omni_distances <- distance_moved(omni$u, maxd = d,
-        scale = TRUE)
+        scale = FALSE)
     omni_distances <- omni_distances %>%
         mutate(
             Anomaly = ifelse(Observations == anomaly, 1, 0)
