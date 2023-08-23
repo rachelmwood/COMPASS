@@ -10,7 +10,7 @@ library(graphstats)
 trials <- 100
 n <- 100
 k <- 10
-l <- 50
+l <- 60
 d <- 12
 data <- tibble(
     trial = NA,

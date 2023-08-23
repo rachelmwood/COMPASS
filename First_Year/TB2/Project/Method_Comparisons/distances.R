@@ -7,14 +7,16 @@ distance_moved <- function(mat, maxd, scale = TRUE, eigenvals = NULL) {
     mat <- mat[, 1:maxd] %*% diag(1 / sqrt(eigenvals[1:maxd]))
   }
   N <- nrow(mat)
+  V1 <- mat[1:(N / 2), ]
+  V2 <- mat[(N / 2 + 1):N, ]
   distances <- apply(
     as.matrix(1:maxd, nrow = 1),
     MARGIN = 1,
     FUN = function(ii) {
       if (ii == 1) {
-        return((mat[1:(N / 2), 1:ii] - mat[(N / 2 + 1):N, 1:ii]) ^ 2)
+        return((V1[, 1:ii] - V2[, 1:ii]) ^ 2)
       } else {
-        return(rowSums((mat[1:(N / 2), 1:ii] - mat[(N / 2 + 1):N, 1:ii]) ^ 2))
+        return(rowSums((V1[, 1:ii] - V2[, 1:ii]) ^ 2))
       }
     })
   distances_grid <- expand.grid(
