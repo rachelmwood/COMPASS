@@ -8,7 +8,7 @@ library(ggplot2)
 library(graphstats)
 
 trials <- 100
-n <- 90
+n <- 100
 k <- 10
 l <- 50
 d <- 12
