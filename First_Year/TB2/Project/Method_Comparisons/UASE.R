@@ -55,3 +55,4 @@ plot_UASE <- function(uase, d = 2, population) {
                c(3, 3))
   grid.arrange(V1_plot, V2_plot, U_plot, layout_matrix = lay)
 }
+
