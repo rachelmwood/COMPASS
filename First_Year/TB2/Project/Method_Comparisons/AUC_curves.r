@@ -8,12 +8,23 @@ library(ROCit)
 library(ggplot2)
 library(graphstats)
 
-trials <- 100
-n <- 100
-k <- 10
-l <- 300
-d <- 12
-data <- tibble(
+simulate_mixtures <- function(
+    # parameters for data simulation
+    trials = 100,
+    n = 100,
+    k = 10,
+    l = 300,
+    d = 12,
+    sigma0 = 0.1,
+    sigma = 0.5,
+    # parameters for mixCoalescent
+    multmin = 1,
+    multmax = 1,
+    beta = 1,
+    fraction = 0.2,
+    qmin = 0.8
+) {
+    data <- tibble(
     trial = NA,
     Method = NA,
     K = NA,
@@ -23,27 +34,29 @@ data <- data[-1, ]
 for (i in 1:trials){
     set.seed(i)
     original <- simulateCoalescent(n, k, l,
-                         sigma0 = 0.5,
-                         sigma = 0.5,
+                         sigma0 = sigma0,
+                         sigma = sigma,
                          Amodel = "uniform",
                          alpha = 0,
                          minedge = 0.1)
     mix <- mixCoalescent(
         original,
-        transform = FALSE,
-        fraction = 1,
-        qmin = 0.8
+        transform = TRUE,
+        multmin = multmin,
+        multmax = multmax,
+        beta = beta,
+        fraction = fraction,
+        qmin = qmin
     )
-    
+    diff_adj <- original$A - mix$A
+    anomalies <- as.numeric(rowSums(abs(diff_adj)) != 0)
+
     groups <- rep(1:10, each = k)
-    
     # UASE AUC Computations
     Y <- cbind(original$Y, mix$Y)
     uase <- UASE(Y, d = d, groups)
     uase_distances <- distance_moved(uase$right, maxd = d,
         scale = TRUE, eigenvals = uase$eigenvals)
-    anomaly <- mix$edges[1]
-    anomalies <- (groups == anomaly)
     uase_distances <- uase_distances %>%
         mutate(
             Anomaly = as.numeric(rep(anomalies, each = d))
@@ -56,7 +69,6 @@ for (i in 1:trials){
             K = uase_auc$K,
             AUC = uase_auc$AUC
         ))
-    
     # OMNI AUC Computations
     omni <- svd(gs.omni(original$Y, mix$Y))
 
@@ -103,45 +115,30 @@ data <- data %>%
     mutate(
         K = as.factor(K)
     )
+return(data)
 
-uase_data <- data %>%
-    filter(Method == "UASE")
-ggplot(data = uase_data,
-        aes(x = K, y = AUC, fill = K)) +
-    geom_boxplot(notch = TRUE) +
-    stat_summary(fun = median,
-               geom = "line",
-               aes(group = 1)) +
-    labs(x = "Number of Components",
-         y = "AUC") +
-    theme_bw() +
-    theme(legend.position = "none")
-ggsave("uase_AUC_boxplot.pdf", width = 5, height = 5)
+}
 
-omni_data <- data %>%
-    filter(Method == "Omni")
-ggplot(data = omni_data,
-        aes(x = K, y = AUC, fill = K)) +
-    geom_boxplot(notch = TRUE) +
-    stat_summary(fun = median,
-               geom = "line",
-               aes(group = 1)) +
-    labs(x = "Number of Components",
-         y = "AUC") +
-    theme_bw() +
-    theme(legend.position = "none")
-ggsave("omni_AUC_boxplot.pdf", width = 5, height = 5)
+scaling <- seq(1, 10, 0.5)
+mean_data <- tibble(
+    Scaling = NA,
+    Method = NA,
+    K = NA,
+    Average = NA
+)
+mean_data <- mean_data[-1, ]
+for (j in 1:length(scaling)) {
+    sim_move <- simulate_mixtures(multmin = 1 / scaling[j],
+                                  multmax = scaling[j])
+    sim_move <- sim_move %>%
+        group_by(Method, K) %>%
+        summarise(Average = mean(AUC))
 
-clarity_data <- data %>%
-    filter(Method == "Clarity")
-ggplot(data = clarity_data,
-        aes(x = K, y = AUC, fill = K)) +
-    geom_boxplot(notch = TRUE) +
-    stat_summary(fun = median,
-               geom = "line",
-               aes(group = 1)) +
-    labs(x = "Number of Components",
-            y = "AUC") +
-    theme_bw() +
-    theme(legend.position = "none")
-ggsave("clarity_AUC_boxplot.pdf", width = 5, height = 5)
+    mean_data <- mean_data %>%
+        rbind(tibble(
+            Scaling = scaling[j],
+            Method = sim_move$Method,
+            K = sim_move$K,
+            Average = sim_move$Average
+        ))
+}
