@@ -27,7 +27,6 @@ simulate_mixtures <- function(
     data <- tibble(
     trial = NA,
     Method = NA,
-    K = NA,
     AUC = NA
 )
 data <- data[-1, ]
@@ -59,16 +58,19 @@ for (i in 1:trials){
         scale = TRUE, eigenvals = uase$eigenvals)
     uase_distances <- uase_distances %>%
         mutate(
-            Anomaly = as.numeric(rep(anomalies, each = d))
+            Anomaly = as.numeric(rep(anomalies))
         )
-    uase_auc <- auc(uase_distances, d)
+    uase_auc <- rocit(
+            score = uase_distances$Distances,
+            class = uase_distances$Anomaly
+        )
     data <- data %>%
         rbind(tibble(
             trial = i,
             Method = "UASE",
-            K = uase_auc$K,
             AUC = uase_auc$AUC
         ))
+    
     # OMNI AUC Computations
     omni <- svd(gs.omni(original$Y, mix$Y))
 
@@ -76,14 +78,16 @@ for (i in 1:trials){
         scale = FALSE)
     omni_distances <- omni_distances %>%
         mutate(
-            Anomaly = as.numeric(rep(anomalies, each = d))
+            Anomaly = as.numeric(anomalies)
         )
-    omni_auc <- auc(omni_distances, d)
+    omni_auc <- rocit(
+            score = omni_distances$Distances,
+            class = omni_distances$Anomaly
+        )
     data <- data %>%
         rbind(tibble(
             trial = i,
             Method = "Omni",
-            K = omni_auc$K,
             AUC = omni_auc$AUC
         ))
 
@@ -91,54 +95,115 @@ for (i in 1:trials){
     scan <- Clarity_Scan(original$Y, verbose = FALSE)
     predict <- Clarity_Predict(mix$Y, scan)
     persist <- Clarity_Persistence(predict)
-    clarity_scores <- expand.grid(
-        Components = as.factor(1:d),
-        Observations = as.factor(1:n))
-    clarity_scores$Distances <- c(t(persist[, 1:d]))
-    clarity_scores <- clarity_scores %>%
+    clarity_scores <- cbind(Observations = 1:n, Distances = persist[, d]) %>%
         as_tibble()
 
     clarity_scores <- clarity_scores %>%
         mutate(
-            Anomaly = as.numeric(rep(anomalies, each = d))
+            Anomaly = as.numeric(anomalies)
         )
-    clarity_auc <- auc(clarity_scores, d)
+    clarity_auc <- rocit(
+            score = clarity_scores$Distances,
+            class = clarity_scores$Anomaly
+        )
     data <- data %>%
         rbind(tibble(
             trial = i,
             Method = "Clarity",
-            K = clarity_auc$K,
             AUC = clarity_auc$AUC
         ))
 }
-data <- data %>%
-    mutate(
-        K = as.factor(K)
-    )
 return(data)
 
 }
 
 scaling <- seq(1, 10, 0.5)
-mean_data <- tibble(
+sigma0 <- seq(0.1, 1, 0.1)^2
+fraction <- c(0.25, 0.5, 0.75, 1)
+beta <- c(0.25, 0.5, 0.75, 1)
+scaling_data <- tibble(
+    Fraction = NA,
+    Beta = NA,
     Scaling = NA,
     Method = NA,
     K = NA,
     Average = NA
 )
-mean_data <- mean_data[-1, ]
-for (j in 1:length(scaling)) {
-    sim_move <- simulate_mixtures(multmin = 1 / scaling[j],
-                                  multmax = scaling[j])
-    sim_move <- sim_move %>%
-        group_by(Method, K) %>%
-        summarise(Average = mean(AUC))
+noise_data <- tibble(
+    Fraction = NA,
+    Beta = NA,
+    Noise = NA,
+    Method = NA,
+    K = NA,
+    Average = NA
+)
+scaling_data <- scaling_data[-1, ]
+noise_data <- noise_data[-1, ]
 
-    mean_data <- mean_data %>%
-        rbind(tibble(
-            Scaling = scaling[j],
-            Method = sim_move$Method,
-            K = sim_move$K,
-            Average = sim_move$Average
-        ))
+for (i in 1: length(fraction)) {
+    for (j in 1: length(beta)) {
+        for (k in 1: length(scaling)) {
+            sim_move <- simulate_mixtures(multmin = 1 / scaling[k],
+                                          multmax = scaling[k],
+                                          beta = beta[j],
+                                          fraction = fraction[i])
+            sim_move <- sim_move %>%
+                group_by(Method) %>%
+                summarise(Average = mean(AUC)) %>%
+                ungroup()
+
+            scaling_data <- scaling_data %>%
+                rbind(tibble(
+                    Fraction = fraction[i],
+                    Beta = beta[j],
+                    Scaling = scaling[k],
+                    Method = sim_move$Method,
+                    K = sim_move$K,
+                    Average = sim_move$Average
+                ))
+        }
+
+        for (l in 1: length(sigma0)) {
+            sim_move <- simulate_mixtures(sigma0 = sigma0[l],
+                                          multmin = 1,
+                                          multmax = 1,
+                                          beta = beta[j],
+                                          fraction = fraction[i])
+            sim_move <- sim_move %>%
+                group_by(Method) %>%
+                summarise(Average = mean(AUC)) %>%
+                ungroup()
+
+            noise_data <- noise_data %>%
+                rbind(tibble(
+                    Fraction = fraction[i],
+                    Beta = beta[j],
+                    Noise = sigma0[l],
+                    Method = sim_move$Method,
+                    K = sim_move$K,
+                    Average = sim_move$Average
+                ))
+        }
+    }
 }
+
+ggplot(scaling_data,
+       aes(x = Scaling, y = Average, color = Method)) +
+    geom_line(linewidth = 1) +
+    labs(x = "Scaling",
+         y = "Average AUC") +
+    ylim(0, 1) +
+    facet_wrap(~Fraction + Beta) +
+    theme_bw()
+ggsave("scalingAUC.pdf")
+
+ggplot(noise_data,
+       aes(x = Noise, y = Average, color = Method)) +
+    geom_line(linewidth = 1) +
+    labs(x = "Noise",
+         y = "Average AUC") +
+    ylim(0, 1) +
+    facet_wrap(~Fraction + Beta) +
+    theme_bw()
+
+ggsave("noiseAUC.pdf")

@@ -9,21 +9,8 @@ distance_moved <- function(mat, maxd, scale = TRUE, eigenvals = NULL) {
   N <- nrow(mat)
   V1 <- mat[1:(N / 2), ]
   V2 <- mat[(N / 2 + 1):N, ]
-  distances <- apply(
-    as.matrix(1:maxd, nrow = 1),
-    MARGIN = 1,
-    FUN = function(ii) {
-      if (ii == 1) {
-        return((V1[, 1:ii] - V2[, 1:ii]) ^ 2)
-      } else {
-        return(rowSums((V1[, 1:ii] - V2[, 1:ii]) ^ 2))
-      }
-    })
-  distances_grid <- expand.grid(
-    Components = as.factor(1:maxd),
-    Observations = as.factor(1:(N / 2)))
-  distances_grid$Distances <- c(t(distances))
-  distances_grid <- distances_grid %>%
+  distances <- rowSums((V1[, 1:maxd] - V2[, 1:maxd]) ^ 2)
+  distances_grid <- cbind(Observations = 1:(N/2), Distances = distances) %>%
     as_tibble()
   return(distances_grid)
 }
