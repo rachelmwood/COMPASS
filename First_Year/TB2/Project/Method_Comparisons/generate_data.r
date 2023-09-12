@@ -7,6 +7,8 @@ library(Clarity)
 library(ROCit)
 library(ggplot2)
 library(graphstats)
+library(doParallel)
+library(readr)
 
 simulate_mixtures <- function(
     # parameters for data simulation
@@ -70,7 +72,6 @@ for (i in 1:trials){
             Method = "UASE",
             AUC = uase_auc$AUC
         ))
-    
     # OMNI AUC Computations
     omni <- svd(gs.omni(original$Y, mix$Y))
 
@@ -137,30 +138,36 @@ noise_data <- tibble(
     K = NA,
     Average = NA
 )
+i <- j <- 1
+
 scaling_data <- scaling_data[-1, ]
 noise_data <- noise_data[-1, ]
+write_csv(scaling_data, "scaling_data.csv")
+write_csv(noise_data, "noise_data.csv")
+
 
 for (i in 1: length(fraction)) {
     for (j in 1: length(beta)) {
         for (k in 1: length(scaling)) {
             sim_move <- simulate_mixtures(multmin = 1 / scaling[k],
                                           multmax = scaling[k],
-                                          beta = beta[j],
+                                         beta = beta[j],
                                           fraction = fraction[i])
-            sim_move <- sim_move %>%
+           sim_move <- sim_move %>%
                 group_by(Method) %>%
                 summarise(Average = mean(AUC)) %>%
                 ungroup()
 
-            scaling_data <- scaling_data %>%
-                rbind(tibble(
+            current_scaling_data <- tibble(
                     Fraction = fraction[i],
                     Beta = beta[j],
                     Scaling = scaling[k],
                     Method = sim_move$Method,
-                    K = sim_move$K,
                     Average = sim_move$Average
-                ))
+                )
+            write_csv(current_scaling_data, "scaling_data.csv", append = TRUE)
+            scaling_data <- scaling_data %>%
+                rbind(current_scaling_data)
         }
 
         for (l in 1: length(sigma0)) {
@@ -174,36 +181,19 @@ for (i in 1: length(fraction)) {
                 summarise(Average = mean(AUC)) %>%
                 ungroup()
 
-            noise_data <- noise_data %>%
-                rbind(tibble(
+            current_noise_data <- tibble(
                     Fraction = fraction[i],
                     Beta = beta[j],
                     Noise = sigma0[l],
                     Method = sim_move$Method,
                     K = sim_move$K,
                     Average = sim_move$Average
-                ))
+                )
+            write_csv(current_noise_data, "noise_data.csv", append = TRUE)
+            noise_data <- noise_data %>%
+                rbind(current_noise_data)
         }
     }
+    print(i)
 }
 
-ggplot(scaling_data,
-       aes(x = Scaling, y = Average, color = Method)) +
-    geom_line(linewidth = 1) +
-    labs(x = "Scaling",
-         y = "Average AUC") +
-    ylim(0, 1) +
-    facet_wrap(~Fraction + Beta) +
-    theme_bw()
-ggsave("scalingAUC.pdf")
-
-ggplot(noise_data,
-       aes(x = Noise, y = Average, color = Method)) +
-    geom_line(linewidth = 1) +
-    labs(x = "Noise",
-         y = "Average AUC") +
-    ylim(0, 1) +
-    facet_wrap(~Fraction + Beta) +
-    theme_bw()
-
-ggsave("noiseAUC.pdf")
