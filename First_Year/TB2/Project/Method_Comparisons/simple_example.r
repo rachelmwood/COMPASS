@@ -1,11 +1,12 @@
-set.seed(8)
+library(ggbiplot)
+set.seed(9)
 
 n <- 100
 k <- 5
 l <- 300
 d <- 12
 sigma0 <- 0.1
-sigma <- 0.5
+sigma <- 1
 multmin <- 0.5
 multmax <- 2
 beta <- 1
@@ -18,7 +19,6 @@ original <- simulateCoalescent(n, k, l,
                 Amodel = "uniform",
                 alpha = 0,
                 minedge = 0.1)
-
 mix <- mixCoalescent(
                 original,
                 transform = TRUE,
@@ -76,3 +76,12 @@ ggplot(mix_sim, aes(x = X, y = Y)) +
     )
 ggsave("mix_sim_mat.pdf", width = 5, height = 5)
 
+original_pca <- prcomp(x = t(original$D), scale. = TRUE)
+
+original_pc_data <- original_pca$rotation[,1:2] %>%
+    as_tibble() %>%
+    mutate(Group = as.factor(rep(1:5, each =20)))
+
+ggplot(original_pc_data, aes(x = PC1, y = PC2)) +
+    geom_point(aes(colour = Group)) +
+    theme_bw()
