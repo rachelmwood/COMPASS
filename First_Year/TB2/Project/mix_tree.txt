@@ -1,0 +1,25 @@
+tree$edge.length[1] <- 0.5
+> plot(tree)
+> tree$edge.length[2] <- 1
+> plot(tree)
+> tree$edge.length[2] <- 2
+> plot(tree)
+> tree$edge.length[3] <- 2
+> plot(tree)
+> tree$edge.length[4] <- 0.75
+> plot(tree)
+> tree$edge.length[4] <- 0.8
+> plot(tree)
+> tree$edge.length[5] <- 1.2
+> plot(tree)
+> tree$edge.length[5] <- 1.4
+> plot(tree)
+> tree$edge.length[4] <- 0.9
+> plot(tree)
+> tree$edge.length[5] <- 1.5
+> plot(tree)
+> tree$edge.length[6] <- 1.2
+> plot(tree)
+> tree$edge.length[7] <- 0.5
+> plot(tree)
+> tree$edge.length[8] <- 0.5
