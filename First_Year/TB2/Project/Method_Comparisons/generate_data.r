@@ -196,4 +196,3 @@ for (i in 1: length(fraction)) {
     }
     print(i)
 }
-

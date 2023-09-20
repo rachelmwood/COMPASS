@@ -2,7 +2,7 @@ require(ggplot2)
 require(dplyr)
 require(gridExtra)
 
-UASE <- function(similarity, d = 2, population) {
+UASE <- function(similarity, d = 2) {
 
   svd <- svd(similarity)
   U <- svd$u %*% diag(sqrt(svd$d))

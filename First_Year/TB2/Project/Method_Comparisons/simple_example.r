@@ -1,8 +1,12 @@
 library(swfscMisc)
 library(ClaritySim)
 library(ggforce)
+library(gridExtra)
 library(tidyverse)
+library(Clarity)
+library(ggpubr)
 set.seed(10)
+source("UASE.R")
 
 n <- 20
 k <- 5
@@ -107,7 +111,7 @@ ggsave("original_pc.pdf", width = 5, height = 5)
 
 groups <- rep(1:5, each = 4)
 moved <- rowSums(abs(original$A - mix$A)) != 0
-groups[moved] <- "Moved"
+groups[moved] <- "Mixture"
 groups <- as.factor(groups)
 
 mix_pca <- prcomp(x = (mix$D), scale. = TRUE)
@@ -130,3 +134,93 @@ ggplot(mix_pc_data, aes(x = PC1, y = PC2, colour = Group)) +
         axis.title.y = element_blank()
     )
 ggsave("mix_pc.pdf", width = 5, height = 5)
+
+uase <- UASE(cbind(original$Y, mix$Y), d = 2)
+scaled_right <- uase$right %*% diag(1/uase$eigenvals) %>%
+    as_tibble() %>%
+    mutate(Group = c(groups, groups),
+    dim = rep(c("1", "2"), each = 20))
+colnames(scaled_right) <- c("1", "2", "Group", "dim")
+right1 <- scaled_right %>%
+    filter(dim == "1") %>%
+    select(-dim)
+
+p1 <- ggplot(right1, aes(x = `1`, y = `2`, color = Group)) +
+    geom_point() +
+    theme_bw()
+right2 <- scaled_right %>%
+    filter(dim == "2") %>%
+    select(-dim)
+
+p2 <- ggplot(right2, aes(x = `1`, y = `2`, color = Group)) +
+    geom_point() +
+    theme_bw() +
+    theme(legend.position = "none")
+
+leg <- get_legend(p1, position = "right")
+
+pdf("uase.pdf", width = 10, height = 5)
+ggarrange(p1, p2, ncol = 2,
+    common.legend = TRUE)
+
+plot_omni <- omni$u[, 1:2] %>%
+    as_tibble() %>%
+    mutate(dim = rep(c("1", "2"), each = 20))
+colnames(plot_omni) <- c("1", "2", "dim")
+
+plot_omni1 <- plot_omni %>%
+    filter(dim == "1") %>%
+    select(-dim) %>%
+    mutate(Group = groups)
+
+plot_omni2 <- plot_omni %>%
+    filter(dim == "2") %>%
+    select(-dim) %>%
+    mutate(Group = groups)
+
+p3 <- ggplot(plot_omni1, aes(x = `1`, y = `2`, color = Group)) +
+    geom_point() +
+    theme_bw()
+p4 <- ggplot(plot_omni2, aes(x = `1`, y = `2`, color = Group)) +
+    geom_point() +
+    theme_bw() +
+    theme(legend.position = "none")
+
+leg <- get_legend(p3, position = "right")
+pdf("omni_ex.pdf", width = 10, height = 5)
+ggarrange(p3, p4, ncol = 2,
+    common.legend = TRUE,
+    legend = "right",
+    legend.grob = leg)
+dev.off()
+
+scan <- Clarity_Scan(original$Y, verbose = FALSE)
+predict <- Clarity_Predict(mix$Y, scan)
+persist <- Clarity_Persistence(predict)
+
+plot_persist <- expand.grid(
+    X = as.factor(1:12),
+    Y = as.factor(1:n)
+)
+plot_persist$prediction <- c(t(persist[, 1:12]))
+
+plot_persist <- as_tibble(plot_persist)
+persist_p <- ggplot(plot_persist, aes(x = X, y = Y)) +
+    stat_summary_2d(aes(z = prediction)) +
+    geom_rect(aes(xmin = 0.5, xmax = 12.5, ymin = 16.5, ymax = 17.5),
+        fill = "transparent",
+        color = "#01012e",
+        size = 0.5) +
+    theme_bw() +
+    scale_fill_distiller(direction = 1) +
+    theme(legend.position = "none",
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank())
+
+pdf("clarity_ex.pdf", width = 5, height = 5)
+persist_p
+dev.off()
