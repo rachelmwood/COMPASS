@@ -162,8 +162,8 @@ leg <- get_legend(p1, position = "right")
 pdf("uase.pdf", width = 10, height = 5)
 ggarrange(p1, p2, ncol = 2,
     common.legend = TRUE)
-
-plot_omni <- omni$u[, 1:2] %>%
+omni <- gs.omni(original$Y, mix$Y)
+plot_omni <- omni[, 1:2] %>%
     as_tibble() %>%
     mutate(dim = rep(c("1", "2"), each = 20))
 colnames(plot_omni) <- c("1", "2", "dim")
@@ -172,17 +172,27 @@ plot_omni1 <- plot_omni %>%
     filter(dim == "1") %>%
     select(-dim) %>%
     mutate(Group = groups)
+plot_omni_moved1 <- plot_omni1 %>%
+    filter(Group == "Mixture")
 
 plot_omni2 <- plot_omni %>%
     filter(dim == "2") %>%
     select(-dim) %>%
     mutate(Group = groups)
+plot_omni_moved2 <- plot_omni2 %>%
+    filter(Group == "Mixture")
 
 p3 <- ggplot(plot_omni1, aes(x = `1`, y = `2`, color = Group)) +
     geom_point() +
+    geom_mark_circle(data = plot_omni_moved1,
+        aes(x = `1`, y = `2`, color = Group),
+        size = 3) +
     theme_bw()
 p4 <- ggplot(plot_omni2, aes(x = `1`, y = `2`, color = Group)) +
     geom_point() +
+    geom_mark_ellipse(data = plot_omni_moved2,
+        aes(x = `1`, y = `2`, color = Group),
+        size = 3) +
     theme_bw() +
     theme(legend.position = "none")
 

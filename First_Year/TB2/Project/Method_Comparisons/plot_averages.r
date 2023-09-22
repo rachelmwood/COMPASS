@@ -24,54 +24,58 @@ ggsave("scalingAUC.pdf", width = 10, height = 5)
 scaling_data1 <- scaling_data %>%
     filter(Alpha == 0.5 & Beta == 0.5)
 
-scaling_p1 <- ggplot(scaling_data1,
+ggplot(scaling_data1,
        aes(x = Scaling, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Scaling",
           y = "Average AUC",
           title = TeX("$\\alpha = 0.5, \\beta = 0.5")) +
      ylim(0, 1) +
-     theme_bw()
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("scalingAUC_1.pdf", width = 2.5, height = 5)
 
 scaling_data2 <- scaling_data %>%
     filter(Alpha == 0.25 & Beta == 1)
 
-scaling_p2 <- ggplot(scaling_data2,
+ggplot(scaling_data2,
        aes(x = Scaling, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Scaling",
           y = "Average AUC",
           title = TeX("$\\alpha = 0.25, \\beta = 1")) +
      ylim(0, 1) +
-     theme_bw()
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("scalingAUC_2.pdf", width = 2.5, height = 5)
 
 scaling_data3 <- scaling_data %>%
     filter(Alpha == 1 & Beta == 0.25)
 
-scaling_p3 <- ggplot(scaling_data3,
+ggplot(scaling_data3,
        aes(x = Scaling, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Scaling",
           y = "Average AUC",
           title = TeX("$\\alpha = 1, \\beta = 0.25")) +
      ylim(0, 1) +
-     theme_bw()
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("scalingAUC_3.pdf", width = 2.5, height = 5)
 
 scaling_data4 <- scaling_data %>%
     filter(Alpha == 1 & Beta == 0.75)
 
-scaling_p4 <- ggplot(scaling_data4,
+ggplot(scaling_data4,
        aes(x = Scaling, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Scaling",
           y = "Average AUC",
           title = TeX("$\\alpha = 1, \\beta = 0.75")) +
      ylim(0, 1) +
-     theme_bw()
-pdf("scalingAUC_ind.pdf", width = 10, height = 5)
-ggarrange(scaling_p3, scaling_p1, scaling_p4, scaling_p2,
-          ncol = 4, common.legend = TRUE, legend = "bottom")
-dev.off()
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("scalingAUC_4.pdf", width = 2.5, height = 5)
 
 
 ggplot(noise_data,
@@ -88,59 +92,106 @@ ggsave("noiseAUC.pdf", width = 10, height = 5)
 noise_data1 <- noise_data %>%
     filter(Alpha == 0.5 & Beta == 0.5)
 
-noise_p1 <- ggplot(noise_data1,
+ggplot(noise_data1,
        aes(x = Noise, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Noise",
           y = "Average AUC",
           title = TeX("$\\alpha = 0.5, \\beta = 0.5")) +
      ylim(0, 1) +
-     theme_bw()
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_1.pdf", width = 2.5, height = 5)
 
 noise_data2 <- noise_data %>%
      filter(Alpha == 0.25 & Beta == 1)
 
 
-noise_p2 <- ggplot(noise_data2,
+ggplot(noise_data2,
        aes(x = Noise, y = Average, color = Method)) + 
      geom_line(linewidth = 0.8) +
      labs(x = "Noise",
           y = "Average AUC",
           title = TeX("$\\alpha = 0.25, \\beta = 1")) +
      ylim(0, 1) +
-     theme_bw()
-
+     theme_bw()+
+     theme(legend.position = "none")
+ggsave("noiseAUC_2.pdf", width = 2.5, height = 5)
 noise_data3 <- noise_data %>%
      filter(Alpha == 1 & Beta == 0.25)
 
-noise_p3 <- ggplot(noise_data3,
+ggplot(noise_data3,
        aes(x = Noise, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Noise",
           y = "Average AUC",
           title = TeX("$\\alpha = 1, \\beta = 0.25")) +
      ylim(0, 1) +
-     theme_bw()
-
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_3.pdf", width = 2.5, height = 5)
 noise_data4 <- noise_data %>%
      filter(Alpha == 1 & Beta == 0.75)
 
-noise_p4 <- ggplot(noise_data4,
+ggplot(noise_data4,
        aes(x = Noise, y = Average, color = Method)) +
      geom_line(linewidth = 0.8) +
      labs(x = "Noise",
           y = "Average AUC",
           title = TeX("$\\alpha = 1, \\beta = 0.75")) +
      ylim(0, 1) +
-     theme_bw()
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_4.pdf", width = 2.5, height = 5)
 
-pdf("noiseAUC_ind.pdf", width = 10, height = 5)
-ggarrange(noise_p3, noise_p1, noise_p4, noise_p2,
-          ncol = 4, common.legend = TRUE, legend = "bottom")
-dev.off()
+ggplot(noise_data1,
+       aes(x = Noise, y = Average, color = Method)) +
+     geom_line(linewidth = 0.8) +
+     labs(x = "Noise",
+          y = "Average AUC",
+          title = TeX("$\\alpha = 0.5, \\beta = 0.5")) +
+     ylim(0, 1) +
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_1.pdf", width = 2.5, height = 5)
 
-pdf("noise_scaling_ind.pdf", width = 10, height = 7.5)
-ggarrange(scaling_p3, scaling_p1, scaling_p4, scaling_p2,
-          noise_p3, noise_p1, noise_p4, noise_p2,
-          ncol = 4, nrow = 2, common.legend = TRUE, legend = "bottom")
-dev.off()
+noise_data2 <- noise_data %>%
+     filter(Alpha == 0.25 & Beta == 1)
+
+
+ggplot(noise_data2,
+       aes(x = Noise, y = Average, color = Method)) + 
+     geom_line(linewidth = 0.8) +
+     labs(x = "Noise",
+          y = "Average AUC",
+          title = TeX("$\\alpha = 0.25, \\beta = 1")) +
+     ylim(0, 1) +
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_2.pdf", width = 2.5, height = 5)
+noise_data3 <- noise_data %>%
+     filter(Alpha == 1 & Beta == 0.25)
+
+ggplot(noise_data3,
+       aes(x = Noise, y = Average, color = Method)) +
+     geom_line(linewidth = 0.8) +
+     labs(x = "Noise",
+          y = "Average AUC",
+          title = TeX("$\\alpha = 1, \\beta = 0.25")) +
+     ylim(0, 1) +
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_3.pdf", width = 2.5, height = 5)
+noise_data4 <- noise_data %>%
+     filter(Alpha == 1 & Beta == 0.75)
+
+ggplot(noise_data4,
+       aes(x = Noise, y = Average, color = Method)) +
+     geom_line(linewidth = 0.8) +
+     labs(x = "Noise",
+          y = "Average AUC",
+          title = TeX("$\\alpha = 1, \\beta = 0.75")) +
+     ylim(0, 1) +
+     theme_bw() +
+     theme(legend.position = "none")
+ggsave("noiseAUC_4.pdf", width = 2.5, height = 5)
