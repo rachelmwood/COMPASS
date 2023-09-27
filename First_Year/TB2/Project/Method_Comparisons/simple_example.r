@@ -3,6 +3,7 @@ library(ClaritySim)
 library(ggforce)
 library(gridExtra)
 library(tidyverse)
+library(graphstats)
 library(Clarity)
 library(ggpubr)
 set.seed(10)
@@ -144,36 +145,56 @@ colnames(scaled_right) <- c("1", "2", "Group", "dim")
 right1 <- scaled_right %>%
     filter(dim == "1") %>%
     select(-dim)
+right1_moved <- right1 %>%
+    filter(Group == "Mixture") %>%
+    mutate(Group = as.factor(Group))
 
-p1 <- ggplot(right1, aes(x = `1`, y = `2`, color = Group)) +
+ggplot(right1, aes(x = `1`, y = `2`, color = Group)) +
     geom_point() +
-    theme_bw()
+    geom_mark_circle(data = right1_moved,
+        aes(x = `1`, y = `2`, color = Group, label = Group),
+        expand = unit(1, "mm")) +
+    theme_bw() +
+    theme(legend.position = "none")
+ggsave("uase_ex1.pdf", width = 5, height = 5)
+
 right2 <- scaled_right %>%
     filter(dim == "2") %>%
     select(-dim)
+right2_moved <- right2 %>%
+    filter(Group == "Mixture") %>%
+    mutate(Group = as.factor(Group))
 
-p2 <- ggplot(right2, aes(x = `1`, y = `2`, color = Group)) +
+ggplot(right2, aes(x = `1`, y = `2`, color = Group)) +
     geom_point() +
+    geom_mark_ellipse(data = right2_moved,
+        aes(x = `1`, y = `2`, color = Group, label = Group),
+        expand = unit(1, "mm")) +
     theme_bw() +
     theme(legend.position = "none")
+ggsave("uase_ex2.pdf", width = 5, height = 5)
 
-leg <- get_legend(p1, position = "right")
+#leg <- get_legend(p1, position = "right")
 
-pdf("uase.pdf", width = 10, height = 5)
-ggarrange(p1, p2, ncol = 2,
-    common.legend = TRUE)
-omni <- gs.omni(original$Y, mix$Y)
+#pdf("uase.pdf", width = 10, height = 5)
+#ggarrange(p1, p2, ncol = 2,
+#    common.legend = TRUE)
+
+omni <- gs.omni(A1 = original$Y, A2 =mix$Y)
+colnames(omni) <- c(as.character(1:40))
 plot_omni <- omni[, 1:2] %>%
     as_tibble() %>%
     mutate(dim = rep(c("1", "2"), each = 20))
-colnames(plot_omni) <- c("1", "2", "dim")
+
 
 plot_omni1 <- plot_omni %>%
     filter(dim == "1") %>%
     select(-dim) %>%
     mutate(Group = groups)
+
 plot_omni_moved1 <- plot_omni1 %>%
-    filter(Group == "Mixture")
+    filter(Group == "Mixture") %>%
+    mutate(Group = as.factor(Group))
 
 plot_omni2 <- plot_omni %>%
     filter(dim == "2") %>%
@@ -182,27 +203,29 @@ plot_omni2 <- plot_omni %>%
 plot_omni_moved2 <- plot_omni2 %>%
     filter(Group == "Mixture")
 
-p3 <- ggplot(plot_omni1, aes(x = `1`, y = `2`, color = Group)) +
+ggplot(plot_omni1, aes(x = `1`, y = `2`, color = Group)) +
     geom_point() +
     geom_mark_circle(data = plot_omni_moved1,
-        aes(x = `1`, y = `2`, color = Group),
-        size = 3) +
-    theme_bw()
-p4 <- ggplot(plot_omni2, aes(x = `1`, y = `2`, color = Group)) +
-    geom_point() +
-    geom_mark_ellipse(data = plot_omni_moved2,
-        aes(x = `1`, y = `2`, color = Group),
-        size = 3) +
+        aes(x = `1`, y = `2`, color = Group, label = Group),
+        expand = unit(1, "mm")) +
     theme_bw() +
     theme(legend.position = "none")
-
-leg <- get_legend(p3, position = "right")
-pdf("omni_ex.pdf", width = 10, height = 5)
-ggarrange(p3, p4, ncol = 2,
-    common.legend = TRUE,
-    legend = "right",
-    legend.grob = leg)
-dev.off()
+ggsave("omni_ex1.pdf", width = 5, height = 5)
+ggplot(plot_omni2, aes(x = `1`, y = `2`, color = Group)) +
+    geom_point() +
+    geom_mark_ellipse(data = plot_omni_moved2,
+        aes(x = `1`, y = `2`, color = Group, label = Group),
+        expand = unit(1, "mm")) +
+    theme_bw() +
+    theme(legend.position = "none")
+ggsave("omni_ex2.pdf", width = 5, height = 5)
+#leg <- get_legend(p3, position = "right")
+#pdf("omni_ex.pdf", width = 10, height = 5)
+#ggarrange(p3, p4, ncol = 2,
+#    common.legend = TRUE,
+#    legend = "right",
+#    legend.grob = leg)
+#dev.off()
 
 scan <- Clarity_Scan(original$Y, verbose = FALSE)
 predict <- Clarity_Predict(mix$Y, scan)

@@ -1,0 +1,81 @@
+Conceptualise distance as a loss function
+
+For joint embedding:
+
+E= Y_1, Y_2 = f(A1, A2) (one for each method)
+
+Delta(Y_1, Y_2;K) (differences between columns of E 2n x K)
+
+For seperate embedding:
+
+Y_1, Y_2 = A1 , g(A2) or (MAYBE BETTER?) Y1, Y2 = f(A1, A2)
+
+Delta (Y1,Y2; K)
+
+What is A?
+X - n x k matrix
+
+A = cov(X) = XX^T - (Xbar)(Xbar)^T (Xbar - n x 1 matrix of row means)
+           = XX^T when X is centered
+
+A_ij =1/K \sum_{k = 1}^K X_{ik}X_{jk} (NOT an adjacency matrix - hope is that it behaves as one)
+
+Say K features are iid from f_i (each subject has it's own f)
+
+E(Xi) = E(fi) , E(Xik Xjk) = E(fi fj)
+
+as k goes to infinity , Aij goes to N(fi fj, 1/K var(fi fj) (by CLT) 
+fi fj - dot product
+
+(asymptotically Aij independent from Ail)
+
+Cov(Aij, Ai'j') = 0 if i neq i' and j neq j'
+
+should have a simple expression in other cases
+
+otherwise
+
+cov(Aij, Ai'j') = 1/K cov(var(fi,fj), var(fi',fj'))
+
+Needed to get to 
+Aij ~ Bernouilli(Pij)
+
+Question: How big does k need to be in relation to n? (potentially k> n^2)
+
+Try and find literature on variances of covariances (PCA?)
+
+(stick with notation that A is a similarity matrix - cov is simplest case of this)
+
+Question: can we construct an adjacency matrix such that our generation can be a P matrix that we can sample A from
+
+maybe don't need the hierarchies - how can we turn them into a deterministic P
+(^shouldn't be hard - in a paper - check email)
+still have problem of how to get P from covariance
+look up covariance of bernouilli (solves the issue of not all entries being iid)
+
+Find way to automatically choose K 
+def of anomaly: something has moved, something has not moved
+for every dimension, get distance moved:
+\sum delta_i
+weight things that have moved a long way and compare that to theoretical expectations
+
+can find most anomalous for each K, maximise this and report
+look up lit for choosing K in pca anomaly detection (?)
+
+JES form:
+Not looking at any particular data type
+looking at embeddings now
+
+comparing heterogeneous data using embeddings
+
+
+
+
+
+
+
+
+
+
+
+
