@@ -8,6 +8,8 @@ library(Clarity)
 library(ggpubr)
 set.seed(10)
 source("UASE.R")
+source("generate_data.r")
+source("distances.R")
 
 n <- 20
 k <- 5
@@ -257,3 +259,4 @@ persist_p <- ggplot(plot_persist, aes(x = X, y = Y)) +
 pdf("clarity_ex.pdf", width = 5, height = 5)
 persist_p
 dev.off()
+

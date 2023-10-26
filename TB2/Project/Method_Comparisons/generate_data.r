@@ -55,7 +55,7 @@ for (i in 1:trials){
     groups <- rep(1:10, each = k)
     # UASE AUC Computations
     Y <- cbind(original$Y, mix$Y)
-    uase <- UASE(Y, d = d, groups)
+    uase <- UASE(Y, d = d)
     uase_distances <- distance_moved(uase$right, maxd = d,
         scale = TRUE, eigenvals = uase$eigenvals)
     uase_distances <- uase_distances %>%
